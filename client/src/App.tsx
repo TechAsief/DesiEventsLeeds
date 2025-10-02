@@ -11,6 +11,8 @@ import EventDetail from "@/pages/event-detail";
 import MyEvents from "@/pages/my-events";
 import EventForm from "@/pages/event-form";
 import AdminDashboard from "@/pages/admin-dashboard";
+import Signup from "@/pages/signup";
+import Login from "@/pages/login";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -20,6 +22,8 @@ function Router() {
       {/* Public routes - accessible to everyone */}
       <Route path="/events/:id" component={EventDetail} />
       <Route path="/admin" component={AdminDashboard} />
+      <Route path="/signup" component={Signup} />
+      <Route path="/login" component={Login} />
       
       {/* Conditional routes based on auth */}
       {isLoading || !isAuthenticated ? (
