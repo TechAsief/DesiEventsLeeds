@@ -22,7 +22,7 @@ export default function Navbar() {
       await apiRequest("POST", "/api/logout", {});
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/");
     },
   });
