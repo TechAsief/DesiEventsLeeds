@@ -20,7 +20,6 @@ function Router() {
   return (
     <Switch>
       {/* Public routes - accessible to everyone */}
-      <Route path="/events/:id" component={EventDetail} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/signup" component={Signup} />
       <Route path="/login" component={Login} />
@@ -36,6 +35,9 @@ function Router() {
           <Route path="/events/:id/edit" component={EventForm} />
         </>
       )}
+      
+      {/* Event detail route - must come after /events/new to avoid matching "new" as an ID */}
+      <Route path="/events/:id" component={EventDetail} />
       <Route component={NotFound} />
     </Switch>
   );
