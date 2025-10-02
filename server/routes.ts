@@ -71,6 +71,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     try {
       const objectStorageService = new ObjectStorageService();
+      const normalizedPath = objectStorageService.normalizeObjectEntityPath(req.body.imageURL);
+      
+      if (!normalizedPath.startsWith("/")) {
+        return res.status(400).json({ error: "Invalid image URL" });
+      }
+
+      const objectFile = await objectStorageService.getObjectEntityFile(normalizedPath);
+      const existingAcl = await import("./objectAcl").then(m => m.getObjectAclPolicy(objectFile));
+      
+      if (existingAcl && existingAcl.owner !== userId) {
+        return res.status(403).json({ error: "You are not authorized to modify this image" });
+      }
+
       const objectPath = await objectStorageService.trySetObjectEntityAclPolicy(
         req.body.imageURL,
         {
