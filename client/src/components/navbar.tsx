@@ -15,8 +15,9 @@ export default function Navbar() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
 
-  const handleLogin = () => {
-    window.location.href = "/api/login";
+  const handleLogin = (returnTo?: string) => {
+    const redirectUrl = returnTo ? `/api/login?returnTo=${encodeURIComponent(returnTo)}` : "/api/login";
+    window.location.href = redirectUrl;
   };
 
   const handleLogout = () => {
@@ -27,7 +28,7 @@ export default function Navbar() {
     if (isAuthenticated) {
       setLocation("/events/new");
     } else {
-      handleLogin();
+      handleLogin("/events/new");
     }
   };
 
