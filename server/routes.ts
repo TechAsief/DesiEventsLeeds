@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./localAuth";
 import { insertEventSchema, insertAnalyticsSchema } from "@shared/schema";
 import { z } from "zod";
 import "./types";
@@ -13,9 +13,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
-      res.json(user);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const { password, ...safeUser } = user;
+      res.json(safeUser);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -29,7 +33,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         await storage.logAnalytics({
           eventType: 'home_visit',
-          userId: req.user?.claims?.sub || null,
+          userId: (req.user as any)?.id || null,
           eventId: null,
           metadata: { ip: req.ip, userAgent: req.get('User-Agent') }
         });
@@ -74,7 +78,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.incrementEventViews(id);
       await storage.logAnalytics({
         eventType: 'event_view',
-        userId: req.user?.claims?.sub || null,
+        userId: (req.user as any)?.id || null,
         eventId: id,
         metadata: { ip: req.ip, userAgent: req.get('User-Agent') }
       });
@@ -89,7 +93,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Protected event routes
   app.get('/api/my-events', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const events = await storage.getEventsByUser(userId);
       res.json(events);
     } catch (error) {
@@ -100,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/events', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const eventData = insertEventSchema.parse(req.body);
       
       const event = await storage.createEvent({ 
@@ -130,7 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/events/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       const eventData = insertEventSchema.partial().parse(req.body);
       
@@ -155,7 +159,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.delete('/api/events/:id', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const { id } = req.params;
       
       const success = await storage.deleteEvent(id, userId);
