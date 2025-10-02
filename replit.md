@@ -10,6 +10,16 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 2, 2025 - Image Upload Feature for Events
+- **Added** Replit Object Storage integration for event image uploads
+- **Added** `imageUrl` field to events database schema (optional text field)
+- **Implemented** secure image upload endpoints with ACL ownership validation
+- **Created** `ObjectUploader` component with upload modal, preview, and 5MB file size limit
+- **Updated** event form to include optional image upload functionality
+- **Updated** event detail page to display uploaded images with gradient fallback
+- **Security**: ACL policies prevent unauthorized users from claiming ownership of others' images
+- **Files**: `server/objectStorage.ts`, `server/objectAcl.ts`, `client/src/components/ObjectUploader.tsx`
+
 ### October 2, 2025 - Authentication System Migration
 - **Replaced** Replit Auth (OpenID Connect) with traditional email/password authentication
 - **Added** signup page (`/signup`) with email, password, firstName, lastName fields
@@ -114,5 +124,12 @@ Preferred communication style: Simple, everyday language.
 - TSX for running TypeScript in development
 - ESBuild for production server bundling
 
+**Object Storage:**
+- Replit Object Storage for event image uploads
+- Secure file upload with ACL (Access Control List) policies
+- Public visibility for event images with owner-based access control
+- 5MB file size limit enforced on frontend
+- Image URLs stored in events table as optional `imageUrl` field
+
 **Third-Party Services:**
-- None required beyond database and authentication (no payment processors, email services, or external APIs)
+- None required beyond database, authentication, and object storage (no payment processors, email services, or external APIs)
