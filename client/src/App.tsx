@@ -17,16 +17,19 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public routes - accessible to everyone */}
+      <Route path="/events/:id" component={EventDetail} />
+      <Route path="/admin" component={AdminDashboard} />
+      
+      {/* Conditional routes based on auth */}
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
         <>
           <Route path="/" component={Home} />
-          <Route path="/events/:id" component={EventDetail} />
           <Route path="/my-events" component={MyEvents} />
           <Route path="/events/new" component={EventForm} />
           <Route path="/events/:id/edit" component={EventForm} />
-          <Route path="/admin" component={AdminDashboard} />
         </>
       )}
       <Route component={NotFound} />
