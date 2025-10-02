@@ -1,0 +1,104 @@
+1. Project Overview & Goal
+Project Title: Desi Events Leeds (Placeholder)
+Goal: To create a Minimum Viable Product (MVP) web application where members of the Indian community in Leeds can easily post and discover local events.
+Constraint (MVP1): The platform is strictly for listing and discovery. No direct ticket booking, payments, or RSVPs will be implemented in this phase. Users must contact the poster externally for booking details.
+
+2. Technical Stack & Environment
+Platform: Replit
+Frontend: HTML/CSS/JavaScript (or a simple framework like React/Vue if preferred, but keep it minimal)
+Backend: Choose a suitable framework (e.g., Node.js/Express, Python/Flask)
+Database: PostgreSQL (Mandatory requirement)
+
+3. Core Features (MVP1)
+A. Public View (No Login Required)
+Feature
+
+Details
+
+Home Page
+
+Displays a list of all current and future events.
+
+Event Card
+
+Each event must show: Title, Date, Time, Location (always Leeds), and a short summary.
+
+Filtering/Search
+
+Basic search functionality by Title and simple filtering by Date (e.g., "This Week," "Next Month").
+
+Event Detail Page
+
+A dedicated page for each event showing the full description and Contact Details (Email/Phone/Social Link) of the event poster.
+
+B. Event Poster Account (Login/Authentication Required)
+Feature
+
+Details
+
+Sign Up/Login
+
+Standard email/password authentication process.
+
+New Event Creation
+
+A form to submit a new event with the following required fields: Title, Date & Time, Specific Location/Venue (Leeds), Long Description, Contact Method (e.g., Email, Phone number, or a booking link), Category (e.g., Festival, Workshop, Networking, Sport).
+
+My Events Dashboard
+
+A private view where the logged-in user can see, edit, or delete the events they have personally posted.
+
+4. Database Schema (PostgreSQL)
+The application requires three primary tables in the PostgreSQL database:
+
+Table Name
+
+Fields (Columns)
+
+Purpose
+
+users
+
+id (PK), email (Unique), password_hash, created_at, role (e.g., 'poster', 'admin')
+
+Stores user credentials and role.
+
+events
+
+id (PK), user_id (FK to users), title, date, time, location_text, description, contact_info, category, is_active (boolean), views_count (integer)
+
+Stores all event data.
+
+analytics
+
+id (PK), timestamp, event_type (e.g., 'login', 'event_view', 'event_post'), user_id (nullable), event_id (nullable)
+
+Tracks all activity for the admin dashboard.
+
+5. Admin & Analytics Dashboard
+This requires a separate, protected route (/admin) and credentials.
+
+Feature
+
+Details
+
+Admin Login
+
+A hard-coded, separate admin credential pair must be set up in the environment variables (or configuration file) for access (e.g., ADMIN_EMAIL, ADMIN_PASSWORD).
+
+Admin Dashboard
+
+A simple, protected page accessible only to the Admin user.
+
+MVP Analytics
+
+Display the following metrics: Total Registered Event Posters, Total Events Posted, Total Unique Daily Logins (Past 7 Days), Event CTR (Click-Through Rate) - calculated as (views_count / total_home_page_impressions). Note: Total impressions can be approximated by counting unique daily visitors to the home page, tracked in the analytics table.
+
+6. Implementation Notes & Constraints
+Security: Ensure passwords are cryptographically hashed and stored securely.
+
+API Design: Use a RESTful API structure for event data retrieval and manipulation.
+
+Error Handling: All forms must include client-side validation and server-side error handling for a smooth user experience.
+
+Deployment: The application must be runnable within the Replit environment, connecting to a PostgreSQL instance.
