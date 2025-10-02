@@ -158,7 +158,16 @@ export default function EventDetail() {
         <Card className="overflow-hidden shadow-lg">
           {/* Event Image */}
           <div className="h-96 bg-gradient-to-br from-primary to-secondary relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+            {event.imageUrl ? (
+              <img 
+                src={event.imageUrl} 
+                alt={event.title}
+                className="w-full h-full object-cover"
+                data-testid="img-event"
+              />
+            ) : (
+              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
+            )}
             <div className="absolute top-6 right-6 bg-white/95 px-4 py-2 rounded-full text-sm font-semibold text-foreground flex items-center space-x-2">
               <Eye className="h-4 w-4 text-primary" />
               <span data-testid="text-views">{event.viewsCount || 0} views</span>
