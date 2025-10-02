@@ -3,7 +3,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { ArrowLeft, Save, Send } from "lucide-react";
+import { ArrowLeft, Save, Send, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,6 +17,8 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { insertEventSchema, type InsertEvent, type Event } from "@shared/schema";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
+import { ObjectUploader } from "@/components/ObjectUploader";
+import type { UploadResult } from "@uppy/core";
 import { z } from "zod";
 
 const formSchema = insertEventSchema.extend({
@@ -33,6 +35,7 @@ export default function EventForm() {
   const { isAuthenticated, isLoading } = useAuth();
   const queryClient = useQueryClient();
   const isEditing = !!id;
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
 
   // Redirect to home if not authenticated
   useEffect(() => {
@@ -91,6 +94,9 @@ export default function EventForm() {
         category: existingEvent.category,
         isActive: existingEvent.isActive,
       });
+      if (existingEvent.imageUrl) {
+        setImageUrl(existingEvent.imageUrl);
+      }
     }
   }, [existingEvent, isEditing, form]);
 
@@ -104,6 +110,7 @@ export default function EventForm() {
         ...data,
         contactPhone: data.contactPhone || undefined,
         bookingLink: data.bookingLink || undefined,
+        imageUrl: imageUrl || undefined,
       };
       
       await apiRequest(method, url, cleanData);
@@ -281,6 +288,71 @@ export default function EventForm() {
                     </FormItem>
                   )}
                 />
+
+                {/* Event Image Upload */}
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Event Image (Optional)</label>
+                  {imageUrl ? (
+                    <div className="relative">
+                      <img 
+                        src={imageUrl} 
+                        alt="Event preview" 
+                        className="w-full h-48 object-cover rounded-lg"
+                        data-testid="img-preview"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-2 right-2"
+                        onClick={() => setImageUrl(null)}
+                        data-testid="button-remove-image"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <ObjectUploader
+                      maxNumberOfFiles={1}
+                      maxFileSize={5242880}
+                      onGetUploadParameters={async () => {
+                        const response = await fetch('/api/objects/upload', {
+                          method: 'POST',
+                          credentials: 'include',
+                        });
+                        const data = await response.json();
+                        return {
+                          method: 'PUT' as const,
+                          url: data.uploadURL,
+                        };
+                      }}
+                      onComplete={async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
+                        if (result.successful && result.successful[0]) {
+                          const uploadedUrl = result.successful[0].uploadURL;
+                          const response = await fetch('/api/event-images', {
+                            method: 'PUT',
+                            headers: { 'Content-Type': 'application/json' },
+                            credentials: 'include',
+                            body: JSON.stringify({ imageURL: uploadedUrl }),
+                          });
+                          const data = await response.json();
+                          setImageUrl(data.objectPath);
+                          toast({
+                            title: "Success",
+                            description: "Image uploaded successfully",
+                          });
+                        }
+                      }}
+                      buttonClassName="w-full"
+                    >
+                      <Upload className="h-4 w-4 mr-2" />
+                      Upload Event Image
+                    </ObjectUploader>
+                  )}
+                  <p className="text-xs text-muted-foreground">
+                    Upload an image for your event (max 5MB, JPG/PNG)
+                  </p>
+                </div>
 
                 {/* Description */}
                 <FormField
