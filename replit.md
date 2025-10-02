@@ -8,6 +8,18 @@ Desi Events Leeds is a community-driven event discovery platform designed specif
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### October 2, 2025 - Authentication System Migration
+- **Replaced** Replit Auth (OpenID Connect) with traditional email/password authentication
+- **Added** signup page (`/signup`) with email, password, firstName, lastName fields
+- **Added** login page (`/login`) with email and password fields
+- **Updated** database schema to include password field (bcrypt hashed)
+- **Implemented** Passport Local Strategy for authentication (`server/localAuth.ts`)
+- **Updated** all routes to use `req.user.id` instead of `req.user.claims.sub`
+- **Updated** navbar with login/signup buttons and user dropdown menu
+- **Security**: Passwords hashed with bcrypt (10 rounds), responses sanitize password field
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -39,8 +51,9 @@ Preferred communication style: Simple, everyday language.
 - TypeScript for type safety across the stack
 - Drizzle ORM for type-safe database queries
 - Neon serverless PostgreSQL as the database provider
-- Passport.js with OpenID Connect for Replit Auth integration
+- Passport.js with Local Strategy for email/password authentication
 - Express sessions stored in PostgreSQL for persistence
+- Bcrypt for secure password hashing
 
 **API Design:**
 - RESTful endpoints organized in `routes.ts`
@@ -50,16 +63,20 @@ Preferred communication style: Simple, everyday language.
 - Middleware-based analytics logging for tracking user interactions
 
 **Authentication Flow:**
-- Replit Auth using OpenID Connect protocol for user authentication
+- Email/password authentication using Passport Local Strategy
+- Passwords hashed with bcrypt (10 salt rounds) before storage
 - Session management via `express-session` with PostgreSQL store
-- User information stored in `users` table with automatic provisioning on first login
-- Admin access controlled separately via credential validation, not integrated with Replit Auth
+- Sign up: POST /api/signup creates user account with email, password, firstName, lastName
+- Login: POST /api/login validates credentials and creates session
+- Logout: POST /api/logout destroys session
+- User information stored in `users` table with password field (hashed)
+- Admin access controlled separately via credential validation
 
 ### Database Schema
 
 **Tables:**
-- `users`: Stores user profiles with Replit Auth integration (mandatory for Replit Auth)
-- `sessions`: Session storage table (mandatory for Replit Auth)
+- `users`: Stores user profiles with email, hashed password, firstName, and lastName
+- `sessions`: Session storage table for express-session
 - `events`: Event listings with user relationship and all event metadata
 - `analytics`: Tracks user interactions (home visits, event views, event creation, logins)
 
@@ -75,9 +92,10 @@ Preferred communication style: Simple, everyday language.
 ### External Dependencies
 
 **Authentication:**
-- Replit Auth (OpenID Connect) for user authentication
-- Requires `REPL_ID`, `ISSUER_URL`, and `SESSION_SECRET` environment variables
-- Session store uses PostgreSQL connection for persistence
+- Email/password authentication using Passport Local Strategy
+- Bcrypt for password hashing (10 salt rounds)
+- Requires `SESSION_SECRET` and `DATABASE_URL` environment variables
+- Session store uses PostgreSQL connection for persistence via connect-pg-simple
 
 **Database:**
 - Neon serverless PostgreSQL accessed via `@neondatabase/serverless`
