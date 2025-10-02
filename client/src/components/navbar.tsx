@@ -1,5 +1,6 @@
 import { useLocation } from "wouter";
 import { Calendar, User, LogOut, Plus } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -10,25 +11,39 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useAuth } from "@/hooks/useAuth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Navbar() {
   const [, setLocation] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
 
-  const handleLogin = (returnTo?: string) => {
-    const redirectUrl = returnTo ? `/api/login?returnTo=${encodeURIComponent(returnTo)}` : "/api/login";
-    window.location.href = redirectUrl;
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/logout", {});
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setLocation("/");
+    },
+  });
+
+  const handleLogin = () => {
+    setLocation("/login");
+  };
+
+  const handleSignup = () => {
+    setLocation("/signup");
   };
 
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    logoutMutation.mutate();
   };
 
   const handlePostEvent = () => {
     if (isAuthenticated) {
       setLocation("/events/new");
     } else {
-      handleLogin("/events/new");
+      setLocation("/signup");
     }
   };
 
@@ -141,14 +156,14 @@ export default function Navbar() {
                   onClick={handleLogin}
                   data-testid="button-login"
                 >
-                  Sign In
+                  Log In
                 </Button>
                 <Button
-                  onClick={handlePostEvent}
+                  onClick={handleSignup}
                   className="bg-primary hover:bg-primary/90"
-                  data-testid="button-register"
+                  data-testid="button-signup"
                 >
-                  Post Event
+                  Sign Up
                 </Button>
               </>
             )}
