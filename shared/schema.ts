@@ -51,6 +51,7 @@ export const events = pgTable("events", {
   contactPhone: varchar("contact_phone"),
   bookingLink: varchar("booking_link"),
   category: varchar("category").notNull(),
+  imageUrl: varchar("image_url"),
   approvalStatus: varchar("approval_status").notNull().default("pending"), // 'pending', 'approved', 'rejected'
   isActive: boolean("is_active").default(true),
   viewsCount: integer("views_count").default(0),
