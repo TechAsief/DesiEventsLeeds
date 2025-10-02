@@ -99,7 +99,7 @@ export default function MyEvents() {
   // Calculate stats
   const totalEvents = events.length;
   const totalViews = events.reduce((sum: number, event: Event) => sum + (event.viewsCount || 0), 0);
-  const activeEvents = events.filter((event: Event) => event.isActive).length;
+  const approvedEvents = events.filter((event: Event) => event.approvalStatus === 'approved').length;
 
   if (isLoading) {
     return (
@@ -167,9 +167,9 @@ export default function MyEvents() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Active Events</p>
-                  <p className="text-3xl font-bold text-foreground" data-testid="text-active-events">
-                    {activeEvents}
+                  <p className="text-sm text-muted-foreground mb-1">Approved Events</p>
+                  <p className="text-3xl font-bold text-foreground" data-testid="text-approved-events">
+                    {approvedEvents}
                   </p>
                 </div>
                 <div className="w-12 h-12 bg-accent/10 rounded-lg flex items-center justify-center">
@@ -248,10 +248,21 @@ export default function MyEvents() {
                       </td>
                       <td className="px-6 py-4">
                         <Badge 
-                          variant={event.isActive ? "default" : "secondary"}
-                          className={event.isActive ? "bg-secondary text-secondary-foreground" : ""}
+                          variant={
+                            event.approvalStatus === 'approved' ? "default" : 
+                            event.approvalStatus === 'rejected' ? "destructive" : 
+                            "secondary"
+                          }
+                          className={
+                            event.approvalStatus === 'approved' ? "bg-green-500/20 text-green-700 dark:text-green-400" : 
+                            event.approvalStatus === 'rejected' ? "bg-red-500/20 text-red-700 dark:text-red-400" : 
+                            "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400"
+                          }
+                          data-testid={`badge-status-${event.id}`}
                         >
-                          {event.isActive ? "Active" : "Draft"}
+                          {event.approvalStatus === 'approved' ? "Approved" : 
+                           event.approvalStatus === 'rejected' ? "Rejected" : 
+                           "Pending Approval"}
                         </Badge>
                       </td>
                       <td className="px-6 py-4 text-right">

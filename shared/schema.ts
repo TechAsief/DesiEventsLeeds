@@ -107,6 +107,8 @@ export const insertEventSchema = createInsertSchema(events).omit({
   viewsCount: true,
   createdAt: true,
   updatedAt: true,
+  approvalStatus: true,
+  isActive: true,
 });
 
 export const insertAnalyticsSchema = createInsertSchema(analytics).omit({

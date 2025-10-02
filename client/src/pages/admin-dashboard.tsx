@@ -1,17 +1,18 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { Users, Calendar, TrendingUp, MousePointer, ArrowUp } from "lucide-react";
+import { Users, Calendar, TrendingUp, MousePointer, ArrowUp, CheckCircle, XCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import type { AnalyticsData } from "@/types";
+import type { Event } from "@shared/schema";
 
 interface AdminLoginForm {
   email: string;
@@ -65,7 +66,53 @@ export default function AdminDashboard() {
   const { data: analytics, isLoading } = useQuery<AnalyticsData>({
     queryKey: ["/api/admin/analytics"],
     enabled: isLoggedIn,
-    refetchInterval: 30000, // Refresh every 30 seconds
+    refetchInterval: 30000,
+  });
+
+  const { data: pendingEvents = [], isLoading: pendingLoading } = useQuery<Event[]>({
+    queryKey: ["/api/admin/pending-events"],
+    enabled: isLoggedIn,
+    refetchInterval: 30000,
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      await apiRequest("POST", `/api/admin/approve-event/${eventId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-events"] });
+      toast({
+        title: "Success",
+        description: "Event approved successfully",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to approve event",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: async (eventId: string) => {
+      await apiRequest("POST", `/api/admin/reject-event/${eventId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/pending-events"] });
+      toast({
+        title: "Success",
+        description: "Event rejected",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to reject event",
+        variant: "destructive",
+      });
+    },
   });
 
   const onSubmit = (data: AdminLoginForm) => {
@@ -272,6 +319,83 @@ export default function AdminDashboard() {
                 </CardContent>
               </Card>
             </div>
+
+            {/* Pending Events Section */}
+            <Card className="mb-8">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Clock className="h-5 w-5" />
+                  Pending Events ({pendingEvents.length})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {pendingLoading ? (
+                  <div className="space-y-4">
+                    {[...Array(3)].map((_, i) => (
+                      <div key={i} className="animate-pulse border rounded-lg p-4">
+                        <div className="h-6 bg-muted rounded mb-2" />
+                        <div className="h-4 bg-muted rounded w-2/3" />
+                      </div>
+                    ))}
+                  </div>
+                ) : pendingEvents.length === 0 ? (
+                  <div className="text-center py-8">
+                    <p className="text-muted-foreground">No pending events</p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {pendingEvents.map((event) => (
+                      <div 
+                        key={event.id} 
+                        className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
+                        data-testid={`card-pending-event-${event.id}`}
+                      >
+                        <div className="flex justify-between items-start gap-4">
+                          <div className="flex-1">
+                            <h3 className="font-semibold text-lg mb-2" data-testid={`text-event-title-${event.id}`}>
+                              {event.title}
+                            </h3>
+                            <div className="text-sm text-muted-foreground space-y-1">
+                              <p>📅 {new Date(event.date).toLocaleDateString()} at {event.time}</p>
+                              <p>📍 {event.locationText}</p>
+                              <p className="line-clamp-2">{event.description}</p>
+                            </div>
+                            <div className="mt-2 flex items-center gap-2">
+                              <Badge variant="outline">{event.category}</Badge>
+                              <Badge className="bg-yellow-500/20 text-yellow-700 dark:text-yellow-400">
+                                Pending
+                              </Badge>
+                            </div>
+                          </div>
+                          <div className="flex gap-2">
+                            <Button
+                              size="sm"
+                              onClick={() => approveMutation.mutate(event.id)}
+                              disabled={approveMutation.isPending || rejectMutation.isPending}
+                              className="bg-green-600 hover:bg-green-700"
+                              data-testid={`button-approve-${event.id}`}
+                            >
+                              <CheckCircle className="h-4 w-4 mr-1" />
+                              Approve
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              onClick={() => rejectMutation.mutate(event.id)}
+                              disabled={approveMutation.isPending || rejectMutation.isPending}
+                              data-testid={`button-reject-${event.id}`}
+                            >
+                              <XCircle className="h-4 w-4 mr-1" />
+                              Reject
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
 
             {/* Recent Activity Table */}
             <Card>

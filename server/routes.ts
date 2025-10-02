@@ -103,7 +103,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user.claims.sub;
       const eventData = insertEventSchema.parse(req.body);
       
-      const event = await storage.createEvent({ ...eventData, userId });
+      const event = await storage.createEvent({ 
+        ...eventData, 
+        userId,
+        approvalStatus: 'pending',
+        isActive: true
+      } as any);
       
       // Log analytics
       await storage.logAnalytics({
@@ -129,7 +134,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const eventData = insertEventSchema.partial().parse(req.body);
       
-      const event = await storage.updateEvent(id, userId, eventData);
+      const event = await storage.updateEvent(id, userId, {
+        ...eventData,
+        approvalStatus: 'pending',
+      } as any);
       
       if (!event) {
         return res.status(404).json({ message: "Event not found or unauthorized" });
