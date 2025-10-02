@@ -225,6 +225,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ message: "Admin logged out successfully" });
   });
 
+  app.get('/api/admin/pending-events', async (req, res) => {
+    try {
+      if (!req.session.isAdmin) {
+        return res.status(401).json({ message: "Admin access required" });
+      }
+      
+      const events = await storage.getPendingEvents();
+      res.json(events);
+    } catch (error) {
+      console.error("Error fetching pending events:", error);
+      res.status(500).json({ message: "Failed to fetch pending events" });
+    }
+  });
+
+  app.post('/api/admin/approve-event/:id', async (req, res) => {
+    try {
+      if (!req.session.isAdmin) {
+        return res.status(401).json({ message: "Admin access required" });
+      }
+      
+      const { id } = req.params;
+      const event = await storage.approveEvent(id);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      res.json(event);
+    } catch (error) {
+      console.error("Error approving event:", error);
+      res.status(500).json({ message: "Failed to approve event" });
+    }
+  });
+
+  app.post('/api/admin/reject-event/:id', async (req, res) => {
+    try {
+      if (!req.session.isAdmin) {
+        return res.status(401).json({ message: "Admin access required" });
+      }
+      
+      const { id } = req.params;
+      const event = await storage.rejectEvent(id);
+      
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+      
+      res.json(event);
+    } catch (error) {
+      console.error("Error rejecting event:", error);
+      res.status(500).json({ message: "Failed to reject event" });
+    }
+  });
+
   // Analytics logging route
   app.post('/api/analytics', async (req, res) => {
     try {

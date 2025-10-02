@@ -40,6 +40,9 @@ export interface IStorage {
   
   // Admin operations
   validateAdminCredentials(email: string, password: string): Promise<boolean>;
+  getPendingEvents(): Promise<Event[]>;
+  approveEvent(id: string): Promise<Event | undefined>;
+  rejectEvent(id: string): Promise<Event | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -71,7 +74,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select()
       .from(events)
-      .where(eq(events.isActive, true))
+      .where(and(eq(events.isActive, true), eq(events.approvalStatus, 'approved')))
       .orderBy(desc(events.date), desc(events.time));
     return result;
   }
@@ -128,6 +131,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(events.isActive, true),
+          eq(events.approvalStatus, 'approved'),
           sql`${events.title} ILIKE ${`%${query}%`}`
         )
       )
@@ -164,7 +168,7 @@ export class DatabaseStorage implements IStorage {
     const result = await db
       .select()
       .from(events)
-      .where(and(eq(events.isActive, true), dateFilter))
+      .where(and(eq(events.isActive, true), eq(events.approvalStatus, 'approved'), dateFilter))
       .orderBy(desc(events.date), desc(events.time));
     return result;
   }
@@ -245,6 +249,33 @@ export class DatabaseStorage implements IStorage {
     const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
     
     return email === adminEmail && password === adminPassword;
+  }
+
+  async getPendingEvents(): Promise<Event[]> {
+    const result = await db
+      .select()
+      .from(events)
+      .where(eq(events.approvalStatus, 'pending'))
+      .orderBy(desc(events.createdAt));
+    return result;
+  }
+
+  async approveEvent(id: string): Promise<Event | undefined> {
+    const [event] = await db
+      .update(events)
+      .set({ approvalStatus: 'approved', updatedAt: new Date() })
+      .where(eq(events.id, id))
+      .returning();
+    return event;
+  }
+
+  async rejectEvent(id: string): Promise<Event | undefined> {
+    const [event] = await db
+      .update(events)
+      .set({ approvalStatus: 'rejected', updatedAt: new Date() })
+      .where(eq(events.id, id))
+      .returning();
+    return event;
   }
 }
 
