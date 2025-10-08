@@ -1,7 +1,8 @@
 // Vercel Function: User login
 export default async function handler(req, res) {
   // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
@@ -20,9 +21,13 @@ export default async function handler(req, res) {
     // For now, return a simple success response
     // TODO: Connect to database for real authentication
     if (email && password) {
+      // Create a simple token (in production, use JWT)
+      const token = Buffer.from(`${email}:${Date.now()}`).toString('base64');
+      
       res.status(200).json({
         success: true,
         message: 'Login successful',
+        token: token,
         user: {
           id: 'user-' + Date.now(),
           email: email,

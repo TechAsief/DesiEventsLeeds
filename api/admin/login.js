@@ -1,7 +1,8 @@
 // Vercel Function: Admin login
 export default async function handler(req, res) {
   // Set CORS headers
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
@@ -24,9 +25,13 @@ export default async function handler(req, res) {
     console.log('Admin login attempt:', { adminEmail, expectedEmail });
 
     if (adminEmail === expectedEmail && adminPassword === expectedPassword) {
+      // Create admin token
+      const token = Buffer.from(`admin:${adminEmail}:${Date.now()}`).toString('base64');
+      
       res.status(200).json({
         success: true,
         message: 'Admin login successful',
+        token: token,
         user: {
           email: adminEmail,
           role: 'admin'
