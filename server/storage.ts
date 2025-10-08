@@ -13,7 +13,7 @@ import {
   type PasswordResetToken,
   type EventApprovalToken,
 } from "../shared/schema.js";
-import { db } from "./db";
+import { db } from "./db.js";
 import { eq, desc, and, gte, count, sql } from "drizzle-orm";
 
 // Interface for storage operations

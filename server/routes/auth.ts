@@ -47,11 +47,11 @@ router.post('/', async (req, res) => {
     console.error('Sign-up error:', error);
     
     // Handle validation errors
-    if (error.name === 'ZodError') {
+    if (error instanceof Error && error.name === 'ZodError') {
       return res.status(400).json({
         success: false,
         message: 'Invalid input data',
-        errors: error.errors,
+        errors: (error as any).errors,
       });
     }
 
@@ -120,11 +120,11 @@ router.post('/login', async (req, res) => {
     console.error('Login error:', error);
     
     // Handle validation errors
-    if (error.name === 'ZodError') {
+    if (error instanceof Error && error.name === 'ZodError') {
       return res.status(400).json({
         success: false,
         message: 'Invalid input data',
-        errors: error.errors,
+        errors: (error as any).errors,
       });
     }
 
