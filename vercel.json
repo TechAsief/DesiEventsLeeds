@@ -7,17 +7,9 @@
       "config": {
         "distDir": "dist/public"
       }
-    },
-    {
-      "src": "server/index.ts",
-      "use": "@vercel/node"
     }
   ],
   "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "server/index.ts"
-    },
     {
       "src": "/(.*)",
       "dest": "/dist/public/$1"
@@ -25,11 +17,6 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "server/index.ts": {
-      "runtime": "nodejs20.x"
-    }
   }
 }
 
