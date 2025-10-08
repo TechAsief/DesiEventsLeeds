@@ -28,7 +28,8 @@ router.post('/', async (req, res) => {
     const newUser = await db.insert(users).values({
       email: validatedData.email,
       password: hashedPassword,
-      name: validatedData.name,
+      firstName: validatedData.firstName,
+      lastName: validatedData.lastName,
     }).returning();
 
     // Return 201 status code on success
@@ -38,7 +39,8 @@ router.post('/', async (req, res) => {
       user: {
         id: newUser[0].id,
         email: newUser[0].email,
-        name: newUser[0].name,
+        firstName: newUser[0].firstName,
+        lastName: newUser[0].lastName,
         createdAt: newUser[0].createdAt,
       },
     });

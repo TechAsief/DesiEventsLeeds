@@ -108,9 +108,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       try {
         await storage.logAnalytics({
           eventType: 'home_visit',
-          userId: (req.user as any)?.id || null,
+          userId: (req as any).user?.id || null,
           eventId: null,
-          metadata: { ip: req.ip, userAgent: req.get('User-Agent') }
+          metadata: { ip: req.ip || '', userAgent: req.get('User-Agent') || '' }
         });
       } catch (error) {
         console.error('Analytics logging error:', error);
@@ -153,9 +153,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.incrementEventViews(id);
       await storage.logAnalytics({
         eventType: 'event_view',
-        userId: (req.user as any)?.id || null,
+        userId: (req as any).user?.id || null,
         eventId: id,
-        metadata: { ip: req.ip, userAgent: req.get('User-Agent') }
+        metadata: { ip: req.ip || '', userAgent: req.get('User-Agent') || '' }
       });
       
       res.json(event);
@@ -213,7 +213,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         // Send notification email to admin
         console.log('📧 Importing email service...');
-        const { emailService } = await import('./emailService');
+        const { emailService } = await import('./emailService.js');
         console.log('📧 Email service imported successfully');
         
         console.log('📧 Generating email HTML...');
@@ -423,7 +423,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = await storage.getUser(resetToken.userId);
       if (user) {
         // Send success email
-        const { emailService } = await import('./emailService');
+        const { emailService } = await import('./emailService.js');
         const emailHtml = emailService.generatePasswordResetSuccessEmail(
           user.firstName || 'User'
         );
@@ -473,7 +473,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send success email to event creator
       const user = await storage.getUser(event.userId);
       if (user) {
-        const { emailService } = await import('./emailService');
+        const { emailService } = await import('./emailService.js');
         const emailHtml = `
           <!DOCTYPE html>
           <html>
@@ -554,7 +554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send rejection email to event creator
       const user = await storage.getUser(event.userId);
       if (user) {
-        const { emailService } = await import('./emailService');
+        const { emailService } = await import('./emailService.js');
         const emailHtml = `
           <!DOCTYPE html>
           <html>

@@ -4,7 +4,7 @@ import { events, users } from '../../shared/schema.js';
 import { eq } from 'drizzle-orm';
 import { requireAdmin } from '../middleware/admin.js';
 import { count } from 'drizzle-orm';
-import { storage } from '../storage';
+import { storage } from '../storage.js';
 
 const router = express.Router();
 
