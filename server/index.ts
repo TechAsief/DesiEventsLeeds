@@ -1,81 +1,105 @@
-import express, { type Request, Response, NextFunction } from "express";
-import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
+import 'dotenv/config';
+import express from 'express';
+import session from 'express-session';
+import MemoryStore from 'memorystore';
+import helmet from 'helmet';
+import cors from 'cors';
+import authRouter from './routes/auth.js';
+import eventsRouter from './routes/events.js';
+import adminRouter from './routes/admin.js';
+
+// --- STANDARD SETUP & CONFIGURATION ---
+
+const PORT = Number(process.env.PORT || 3000);
+const NODE_ENV = process.env.NODE_ENV || 'development';
 
 const app = express();
 
-declare module 'http' {
-  interface IncomingMessage {
-    rawBody: unknown
-  }
-}
-app.use(express.json({
-  verify: (req, _res, buf) => {
-    req.rawBody = buf;
-  }
-}));
-app.use(express.urlencoded({ extended: false }));
+// Security Middleware (Helmet sets secure HTTP headers)
+app.use(helmet());
 
+// CORS Configuration (Allows frontend to talk to this server)
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://localhost:3000'
+];
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Allow requests with no origin (like mobile apps or curl requests)
+      if (!origin) return callback(null, true);
+      
+      if (allowedOrigins.includes(origin)) {
+        return callback(null, true);
+      }
+      
+      return callback(new Error('Not allowed by CORS'));
+    },
+    credentials: true,
+  }),
+);
+
+// Body Parsing (Allows reading JSON data from the frontend)
+app.use(express.json());
+
+// Debug middleware to log all requests
 app.use((req, res, next) => {
-  const start = Date.now();
-  const path = req.path;
-  let capturedJsonResponse: Record<string, any> | undefined = undefined;
-
-  const originalResJson = res.json;
-  res.json = function (bodyJson, ...args) {
-    capturedJsonResponse = bodyJson;
-    return originalResJson.apply(res, [bodyJson, ...args]);
-  };
-
-  res.on("finish", () => {
-    const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
-    }
+  console.log(`📡 ${req.method} ${req.path}`, {
+    body: req.body,
+    headers: req.headers['content-type'],
+    origin: req.headers.origin,
+    cookie: req.headers.cookie ? 'present' : 'missing'
   });
-
   next();
 });
 
-(async () => {
-  const server = await registerRoutes(app);
+// Session Middleware
+const sessionStore = new (MemoryStore(session))({
+  checkPeriod: 86400000, // prune expired entries every 24h
+});
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+app.use(
+  session({
+    store: sessionStore,
+    secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+    resave: false,
+    saveUninitialized: true,
+    name: 'connect.sid',
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: false,
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+      path: '/',
+    },
+  }),
+);
 
-    res.status(status).json({ message });
-    throw err;
-  });
+// Register auth routes
+app.use('/api/auth', authRouter);
 
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
-  } else {
-    serveStatic(app);
-  }
+// Register events routes
+app.use('/api/events', eventsRouter);
 
-  // ALWAYS serve the app on the port specified in the environment variable PORT
-  // Other ports are firewalled. Default to 5000 if not specified.
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
-    log(`serving on port ${port}`);
-  });
-})();
+// Register admin routes
+app.use('/api/admin', adminRouter);
+
+// --- TEMPORARY ROUTES FOR TESTING ---
+
+// Healthcheck: Confirms the API server is alive
+app.get('/health', (_req, res) => {
+  res.json({ ok: true, env: NODE_ENV, message: "Server is running." });
+});
+
+app.get('/', (_req, res) => {
+  res.send('Desi Events Leeds API is operational.');
+});
+
+// --- SERVER STARTUP ---
+
+app.listen(PORT, () => {
+  // eslint-disable-next-line no-console
+  console.log(`\n🎉 Server successfully listening on http://localhost:${PORT}`);
+  console.log(`   (Environment: ${NODE_ENV})`);
+});

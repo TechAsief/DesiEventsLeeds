@@ -1,12 +1,12 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./localAuth";
+import { storage } from "./storage.js";
+import { setupAuth, isAuthenticated } from "./localAuth.js";
 import { insertEventSchema, insertAnalyticsSchema } from "@shared/schema";
 import { z } from "zod";
-import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage";
-import { ObjectPermission } from "./objectAcl";
-import "./types";
+import { ObjectStorageService, ObjectNotFoundError } from "./objectStorage.js";
+import { ObjectPermission } from "./objectAcl.js";
+import "./types.js";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -179,15 +179,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post('/api/events', isAuthenticated, async (req: any, res) => {
     try {
+      console.log('🎯 NEW CODE: Event creation endpoint hit!');
       const userId = req.user.id;
       const eventData = insertEventSchema.parse(req.body);
       
+      console.log('🎯 Creating event in database...');
       const event = await storage.createEvent({ 
         ...eventData, 
         userId,
         approvalStatus: 'pending',
         isActive: true
       } as any);
+      console.log('🎯 Event created with ID:', event.id);
       
       // Log analytics
       await storage.logAnalytics({
@@ -196,6 +199,43 @@ export async function registerRoutes(app: Express): Promise<Server> {
         eventId: event.id,
         metadata: { category: event.category }
       });
+
+      // Create approval tokens and send notification email
+      try {
+        console.log('📧 Creating approval tokens for event:', event.id);
+        const { approveToken, rejectToken } = await storage.createEventApprovalTokens(event.id);
+        console.log('📧 Approval tokens created:', { approveToken: approveToken.substring(0, 10) + '...', rejectToken: rejectToken.substring(0, 10) + '...' });
+        
+        // Generate approval links
+        const approveLink = `${req.protocol}://${req.get('host')}/api/events/approve-email/${approveToken}`;
+        const rejectLink = `${req.protocol}://${req.get('host')}/api/events/reject-email/${rejectToken}`;
+        console.log('📧 Approval links generated:', { approveLink, rejectLink });
+
+        // Send notification email to admin
+        console.log('📧 Importing email service...');
+        const { emailService } = await import('./emailService');
+        console.log('📧 Email service imported successfully');
+        
+        console.log('📧 Generating email HTML...');
+        const emailHtml = emailService.generateEventApprovalEmail(event, approveLink, rejectLink);
+        console.log('📧 Email HTML generated, length:', emailHtml.length);
+
+        console.log('📧 Sending email to asief1991@gmail.com...');
+        const emailSent = await emailService.sendEmail({
+          to: 'asief1991@gmail.com',
+          subject: `New Event Pending Approval: ${event.title}`,
+          html: emailHtml,
+        });
+
+        if (emailSent) {
+          console.log('✅ Event approval email sent successfully!');
+        } else {
+          console.error('❌ Failed to send event approval email for event:', event.id);
+        }
+      } catch (emailError) {
+        console.error('Error sending approval email:', emailError);
+        // Don't fail the event creation if email fails
+      }
       
       res.status(201).json(event);
     } catch (error) {
@@ -250,81 +290,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin routes
-  app.post('/api/admin/login', async (req, res) => {
-    try {
-      const { email, password } = req.body;
-      
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password required" });
-      }
-      
-      const isValid = await storage.validateAdminCredentials(email, password);
-      
-      if (!isValid) {
-        return res.status(401).json({ message: "Invalid admin credentials" });
-      }
-      
-      // Set admin session
-      req.session.isAdmin = true;
-      res.json({ message: "Admin logged in successfully" });
-    } catch (error) {
-      console.error("Error in admin login:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  app.get('/api/admin/analytics', async (req, res) => {
-    try {
-      if (!req.session.isAdmin) {
-        return res.status(401).json({ message: "Admin access required" });
-      }
-      
-      const [
-        totalPosters,
-        totalEvents,
-        uniqueLogins,
-        eventCTR,
-        recentActivity
-      ] = await Promise.all([
-        storage.getTotalEventPosters(),
-        storage.getTotalEvents(),
-        storage.getUniqueLoginsLast7Days(),
-        storage.getEventCTR(),
-        storage.getRecentActivity()
-      ]);
-      
-      res.json({
-        totalPosters,
-        totalEvents,
-        uniqueLogins,
-        eventCTR: Math.round(eventCTR * 100) / 100, // Round to 2 decimal places
-        recentActivity
-      });
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-      res.status(500).json({ message: "Failed to fetch analytics" });
-    }
-  });
-
-  app.post('/api/admin/logout', (req, res) => {
-    req.session.isAdmin = false;
-    res.json({ message: "Admin logged out successfully" });
-  });
-
-  app.get('/api/admin/pending-events', async (req, res) => {
-    try {
-      if (!req.session.isAdmin) {
-        return res.status(401).json({ message: "Admin access required" });
-      }
-      
-      const events = await storage.getPendingEvents();
-      res.json(events);
-    } catch (error) {
-      console.error("Error fetching pending events:", error);
-      res.status(500).json({ message: "Failed to fetch pending events" });
-    }
-  });
+  // Admin routes are now handled by the admin router
 
   app.post('/api/admin/approve-event/:id', async (req, res) => {
     try {
@@ -378,6 +344,264 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Invalid analytics data", errors: error.errors });
       }
       res.status(500).json({ message: "Failed to log analytics" });
+    }
+  });
+
+  // Password reset routes
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+      const { email } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      // Check if user exists
+      const user = await storage.getUserByEmail(email);
+      if (!user) {
+        // For security, don't reveal if email exists or not
+        return res.json({ message: "If an account with that email exists, a password reset link has been sent." });
+      }
+
+      // Create password reset token
+      const { token, expiresAt } = await storage.createPasswordResetToken(user.id);
+
+      // Generate reset link
+      const resetLink = `${req.protocol}://${req.get('host')}/reset-password?token=${token}`;
+
+      // Send email
+      const { emailService } = await import('./emailService');
+      const emailHtml = emailService.generatePasswordResetEmail(
+        user.firstName || 'User',
+        resetLink
+      );
+
+      const emailSent = await emailService.sendEmail({
+        to: user.email,
+        subject: 'Password Reset - Desi Events Leeds',
+        html: emailHtml,
+      });
+
+      if (!emailSent) {
+        console.error('Failed to send password reset email to:', user.email);
+        return res.status(500).json({ message: "Failed to send reset email. Please try again." });
+      }
+
+      res.json({ message: "If an account with that email exists, a password reset link has been sent." });
+    } catch (error) {
+      console.error("Error in forgot password:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+      const { token, password } = req.body;
+      
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token and new password are required" });
+      }
+
+      // Validate password strength
+      if (password.length < 6) {
+        return res.status(400).json({ message: "Password must be at least 6 characters long" });
+      }
+
+      // Get and validate token
+      const resetToken = await storage.getPasswordResetToken(token);
+      if (!resetToken) {
+        return res.status(400).json({ message: "Invalid or expired reset token" });
+      }
+
+      // Update user password
+      await storage.updateUserPassword(resetToken.userId, password);
+
+      // Mark token as used
+      await storage.markPasswordResetTokenUsed(token);
+
+      // Get user for email notification
+      const user = await storage.getUser(resetToken.userId);
+      if (user) {
+        // Send success email
+        const { emailService } = await import('./emailService');
+        const emailHtml = emailService.generatePasswordResetSuccessEmail(
+          user.firstName || 'User'
+        );
+
+        await emailService.sendEmail({
+          to: user.email,
+          subject: 'Password Reset Successful - Desi Events Leeds',
+          html: emailHtml,
+        });
+      }
+
+      res.json({ message: "Password has been reset successfully. You can now log in with your new password." });
+    } catch (error) {
+      console.error("Error in reset password:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Email-based event approval routes
+  app.post('/api/events/approve-email/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      if (!token) {
+        return res.status(400).json({ message: "Approval token is required" });
+      }
+
+      // Get and validate token
+      const approvalToken = await storage.getEventApprovalToken(token);
+      if (!approvalToken) {
+        return res.status(400).json({ message: "Invalid or expired approval token" });
+      }
+
+      if (approvalToken.action !== 'approve') {
+        return res.status(400).json({ message: "Invalid token action" });
+      }
+
+      // Approve the event
+      const event = await storage.approveEvent(approvalToken.eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Mark token as used
+      await storage.markEventApprovalTokenUsed(token);
+
+      // Send success email to event creator
+      const user = await storage.getUser(event.userId);
+      if (user) {
+        const { emailService } = await import('./emailService');
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Event Approved - Desi Events Leeds</title>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: linear-gradient(135deg, #28a745, #20c997); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+              .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+              .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Desi Events Leeds</h1>
+                <p>Community • Culture • Connection</p>
+              </div>
+              <div class="content">
+                <h2>🎉 Your Event Has Been Approved!</h2>
+                <p>Hello ${user.firstName || 'Valued Member'},</p>
+                <p>Great news! Your event "<strong>${event.title}</strong>" has been approved and is now live on our platform.</p>
+                <p>Your event will be visible to the community and they can now view the details and contact you for more information.</p>
+                <p>Thank you for contributing to the Desi Events Leeds community!</p>
+                <p>Best regards,<br>The Desi Events Leeds Team</p>
+              </div>
+              <div class="footer">
+                <p>© 2024 Desi Events Leeds. All rights reserved.</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        await emailService.sendEmail({
+          to: user.email,
+          subject: 'Event Approved - Desi Events Leeds',
+          html: emailHtml,
+        });
+      }
+
+      res.json({ message: "Event approved successfully via email" });
+    } catch (error) {
+      console.error("Error in email approval:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.post('/api/events/reject-email/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+      
+      if (!token) {
+        return res.status(400).json({ message: "Rejection token is required" });
+      }
+
+      // Get and validate token
+      const approvalToken = await storage.getEventApprovalToken(token);
+      if (!approvalToken) {
+        return res.status(400).json({ message: "Invalid or expired rejection token" });
+      }
+
+      if (approvalToken.action !== 'reject') {
+        return res.status(400).json({ message: "Invalid token action" });
+      }
+
+      // Reject the event
+      const event = await storage.rejectEvent(approvalToken.eventId);
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Mark token as used
+      await storage.markEventApprovalTokenUsed(token);
+
+      // Send rejection email to event creator
+      const user = await storage.getUser(event.userId);
+      if (user) {
+        const { emailService } = await import('./emailService');
+        const emailHtml = `
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <title>Event Not Approved - Desi Events Leeds</title>
+            <style>
+              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+              .header { background: linear-gradient(135deg, #dc3545, #c82333); color: white; padding: 20px; text-align: center; border-radius: 10px 10px 0 0; }
+              .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+              .footer { text-align: center; margin-top: 30px; color: #666; font-size: 12px; }
+            </style>
+          </head>
+          <body>
+            <div class="container">
+              <div class="header">
+                <h1>Desi Events Leeds</h1>
+                <p>Community • Culture • Connection</p>
+              </div>
+              <div class="content">
+                <h2>Event Not Approved</h2>
+                <p>Hello ${user.firstName || 'Valued Member'},</p>
+                <p>We're sorry to inform you that your event "<strong>${event.title}</strong>" was not approved for publication on our platform.</p>
+                <p>This could be due to various reasons such as content policy, incomplete information, or not meeting our community guidelines.</p>
+                <p>You're welcome to submit a new event that better aligns with our platform standards. If you have any questions, please don't hesitate to contact us.</p>
+                <p>Best regards,<br>The Desi Events Leeds Team</p>
+              </div>
+              <div class="footer">
+                <p>© 2024 Desi Events Leeds. All rights reserved.</p>
+              </div>
+            </div>
+          </body>
+          </html>
+        `;
+
+        await emailService.sendEmail({
+          to: user.email,
+          subject: 'Event Not Approved - Desi Events Leeds',
+          html: emailHtml,
+        });
+      }
+
+      res.json({ message: "Event rejected successfully via email" });
+    } catch (error) {
+      console.error("Error in email rejection:", error);
+      res.status(500).json({ message: "Internal server error" });
     }
   });
 

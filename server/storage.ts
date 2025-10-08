@@ -2,13 +2,17 @@ import {
   users,
   events,
   analytics,
+  passwordResetTokens,
+  eventApprovalTokens,
   type User,
   type SignupData,
   type Event,
   type InsertEvent,
   type InsertAnalytics,
   type Analytics,
-} from "@shared/schema";
+  type PasswordResetToken,
+  type EventApprovalToken,
+} from "../shared/schema.js";
 import { db } from "./db";
 import { eq, desc, and, gte, count, sql } from "drizzle-orm";
 
@@ -43,6 +47,17 @@ export interface IStorage {
   getPendingEvents(): Promise<Event[]>;
   approveEvent(id: string): Promise<Event | undefined>;
   rejectEvent(id: string): Promise<Event | undefined>;
+  
+  // Password reset operations
+  createPasswordResetToken(userId: string): Promise<{ token: string; expiresAt: Date }>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined>;
+  markPasswordResetTokenUsed(token: string): Promise<void>;
+  updateUserPassword(userId: string, newPassword: string): Promise<void>;
+  
+  // Event approval operations
+  createEventApprovalTokens(eventId: string): Promise<{ approveToken: string; rejectToken: string; expiresAt: Date }>;
+  getEventApprovalToken(token: string): Promise<EventApprovalToken | undefined>;
+  markEventApprovalTokenUsed(token: string): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -244,10 +259,21 @@ export class DatabaseStorage implements IStorage {
 
   // Admin operations
   async validateAdminCredentials(email: string, password: string): Promise<boolean> {
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@desieventsleeds.com';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    const adminEmail = (process.env.ADMIN_EMAIL || 'admin@desieventsleeds.com').trim();
+    const adminPassword = (process.env.ADMIN_PASSWORD || 'admin123').trim();
     
-    return email === adminEmail && password === adminPassword;
+    const providedEmail = email.trim();
+    const providedPassword = password.trim();
+    
+    // Debug logging to help troubleshoot
+    console.log('🔐 Admin Login Attempt:');
+    console.log('  Provided Email:', providedEmail);
+    console.log('  Expected Email:', adminEmail);
+    console.log('  Email Match:', providedEmail === adminEmail);
+    console.log('  Password Match:', providedPassword === adminPassword);
+    console.log('  Environment Variables Loaded:', !!process.env.ADMIN_EMAIL);
+    
+    return providedEmail === adminEmail && providedPassword === adminPassword;
   }
 
   async getPendingEvents(): Promise<Event[]> {
@@ -275,6 +301,112 @@ export class DatabaseStorage implements IStorage {
       .where(eq(events.id, id))
       .returning();
     return event;
+  }
+
+  // Password reset operations
+  async createPasswordResetToken(userId: string): Promise<{ token: string; expiresAt: Date }> {
+    // Generate a secure random token
+    const token = require('crypto').randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+    // Delete any existing tokens for this user
+    await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, userId));
+
+    // Create new token
+    await db.insert(passwordResetTokens).values({
+      userId,
+      token,
+      expiresAt,
+      used: false,
+    });
+
+    return { token, expiresAt };
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | undefined> {
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.token, token),
+          eq(passwordResetTokens.used, false),
+          gte(passwordResetTokens.expiresAt, new Date())
+        )
+      );
+    return resetToken;
+  }
+
+  async markPasswordResetTokenUsed(token: string): Promise<void> {
+    await db
+      .update(passwordResetTokens)
+      .set({ used: true })
+      .where(eq(passwordResetTokens.token, token));
+  }
+
+  async updateUserPassword(userId: string, newPassword: string): Promise<void> {
+    const bcrypt = require('bcrypt');
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    
+    await db
+      .update(users)
+      .set({ 
+        password: hashedPassword, 
+        updatedAt: new Date() 
+      })
+      .where(eq(users.id, userId));
+  }
+
+  // Event approval operations
+  async createEventApprovalTokens(eventId: string): Promise<{ approveToken: string; rejectToken: string; expiresAt: Date }> {
+    // Generate secure random tokens
+    const approveToken = require('crypto').randomBytes(32).toString('hex');
+    const rejectToken = require('crypto').randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days from now
+
+    // Delete any existing tokens for this event
+    await db.delete(eventApprovalTokens).where(eq(eventApprovalTokens.eventId, eventId));
+
+    // Create new tokens
+    await db.insert(eventApprovalTokens).values([
+      {
+        eventId,
+        token: approveToken,
+        expiresAt,
+        used: false,
+        action: 'approve',
+      },
+      {
+        eventId,
+        token: rejectToken,
+        expiresAt,
+        used: false,
+        action: 'reject',
+      },
+    ]);
+
+    return { approveToken, rejectToken, expiresAt };
+  }
+
+  async getEventApprovalToken(token: string): Promise<EventApprovalToken | undefined> {
+    const [approvalToken] = await db
+      .select()
+      .from(eventApprovalTokens)
+      .where(
+        and(
+          eq(eventApprovalTokens.token, token),
+          eq(eventApprovalTokens.used, false),
+          gte(eventApprovalTokens.expiresAt, new Date())
+        )
+      );
+    return approvalToken;
+  }
+
+  async markEventApprovalTokenUsed(token: string): Promise<void> {
+    await db
+      .update(eventApprovalTokens)
+      .set({ used: true })
+      .where(eq(eventApprovalTokens.token, token));
   }
 }
 

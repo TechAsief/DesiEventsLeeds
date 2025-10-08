@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation } from "@tanstack/react-query";
@@ -16,10 +17,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
+import ForgotPassword from "@/components/forgot-password";
 
 export default function Login() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   const form = useForm<LoginData>({
     resolver: zodResolver(loginSchema),
@@ -54,6 +57,14 @@ export default function Login() {
   const onSubmit = (data: LoginData) => {
     loginMutation.mutate(data);
   };
+
+  if (showForgotPassword) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-orange-50 to-white dark:from-gray-900 dark:to-gray-800 p-4">
+        <ForgotPassword onBack={() => setShowForgotPassword(false)} />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-orange-50 to-white dark:from-gray-900 dark:to-gray-800 p-4">
@@ -113,15 +124,26 @@ export default function Login() {
               </Button>
             </form>
           </Form>
-          <div className="mt-4 text-center text-sm">
-            Don't have an account?{" "}
-            <button
-              onClick={() => setLocation("/signup")}
-              className="text-orange-600 hover:underline dark:text-orange-400"
-              data-testid="link-signup"
-            >
-              Sign up
-            </button>
+          <div className="mt-4 space-y-2 text-center text-sm">
+            <div>
+              <button
+                onClick={() => setShowForgotPassword(true)}
+                className="text-orange-600 hover:underline dark:text-orange-400"
+                data-testid="link-forgot-password"
+              >
+                Forgot your password?
+              </button>
+            </div>
+            <div>
+              Don't have an account?{" "}
+              <button
+                onClick={() => setLocation("/signup")}
+                className="text-orange-600 hover:underline dark:text-orange-400"
+                data-testid="link-signup"
+              >
+                Sign up
+              </button>
+            </div>
           </div>
         </CardContent>
       </Card>

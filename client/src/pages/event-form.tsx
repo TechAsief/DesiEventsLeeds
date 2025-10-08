@@ -118,7 +118,9 @@ export default function EventForm() {
     onSuccess: () => {
       toast({
         title: "Success",
-        description: `Event ${isEditing ? "updated" : "created"} successfully`,
+        description: isEditing 
+          ? "Event updated successfully!" 
+          : "Thank you for submitting your event! Your event has been sent for approval and will be reviewed by our team. You can expect a decision within 24 hours.",
       });
       queryClient.invalidateQueries({ queryKey: ["/api/my-events"] });
       queryClient.invalidateQueries({ queryKey: ["/api/events"] });

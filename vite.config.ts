@@ -1,23 +1,10 @@
 import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path";
-import runtimeErrorOverlay from "@replit/vite-plugin-runtime-error-modal";
 
 export default defineConfig({
   plugins: [
     react(),
-    runtimeErrorOverlay(),
-    ...(process.env.NODE_ENV !== "production" &&
-    process.env.REPL_ID !== undefined
-      ? [
-          await import("@replit/vite-plugin-cartographer").then((m) =>
-            m.cartographer(),
-          ),
-          await import("@replit/vite-plugin-dev-banner").then((m) =>
-            m.devBanner(),
-          ),
-        ]
-      : []),
   ],
   resolve: {
     alias: {
@@ -32,9 +19,28 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
+    host: true, // Allow external connections (like Replit)
+    port: 5173,
+    strictPort: false,
     fs: {
-      strict: true,
-      deny: ["**/.*"],
+      strict: false, // More permissive file access
+      allow: ['..'], // Allow access to parent directories
     },
+    cors: true, // Enable CORS for better API communication
+    proxy: {
+      // Proxy API requests to backend (like Replit does)
+      '/api': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+        secure: false,
+      },
+    },
+  },
+  optimizeDeps: {
+    include: ['react', 'react-dom'], // Pre-bundle these for faster loading
+  },
+  esbuild: {
+    // Better development experience
+    logOverride: { 'this-is-undefined-in-esm': 'silent' },
   },
 });

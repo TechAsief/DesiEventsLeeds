@@ -68,10 +68,30 @@ export const analytics = pgTable("analytics", {
   metadata: jsonb("metadata"), // Additional data like IP, user agent, etc.
 });
 
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  token: varchar("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const eventApprovalTokens = pgTable("event_approval_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().references(() => events.id, { onDelete: "cascade" }),
+  token: varchar("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  used: boolean("used").default(false),
+  action: varchar("action"), // 'approve' or 'reject'
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   events: many(events),
   analytics: many(analytics),
+  passwordResetTokens: many(passwordResetTokens),
 }));
 
 export const eventsRelations = relations(events, ({ one, many }) => ({
@@ -80,6 +100,7 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
     references: [users.id],
   }),
   analytics: many(analytics),
+  approvalTokens: many(eventApprovalTokens),
 }));
 
 export const analyticsRelations = relations(analytics, ({ one }) => ({
@@ -89,6 +110,20 @@ export const analyticsRelations = relations(analytics, ({ one }) => ({
   }),
   event: one(events, {
     fields: [analytics.eventId],
+    references: [events.id],
+  }),
+}));
+
+export const passwordResetTokensRelations = relations(passwordResetTokens, ({ one }) => ({
+  user: one(users, {
+    fields: [passwordResetTokens.userId],
+    references: [users.id],
+  }),
+}));
+
+export const eventApprovalTokensRelations = relations(eventApprovalTokens, ({ one }) => ({
+  event: one(events, {
+    fields: [eventApprovalTokens.eventId],
     references: [events.id],
   }),
 }));
@@ -111,6 +146,15 @@ export const loginSchema = z.object({
   password: z.string().min(1, "Password is required"),
 });
 
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+});
+
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+});
+
 export const insertEventSchema = createInsertSchema(events).omit({
   id: true,
   userId: true,
@@ -129,8 +173,12 @@ export const insertAnalyticsSchema = createInsertSchema(analytics).omit({
 // Types
 export type SignupData = z.infer<typeof signupSchema>;
 export type LoginData = z.infer<typeof loginSchema>;
+export type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordData = z.infer<typeof resetPasswordSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertEvent = z.infer<typeof insertEventSchema>;
 export type Event = typeof events.$inferSelect;
 export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
 export type Analytics = typeof analytics.$inferSelect;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+export type EventApprovalToken = typeof eventApprovalTokens.$inferSelect;

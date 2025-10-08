@@ -1,15 +1,25 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import { drizzle } from 'drizzle-orm/neon-serverless';
-import ws from "ws";
-import * as schema from "@shared/schema";
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import * as schema from '../shared/schema.js';
+import 'dotenv/config';
 
-neonConfig.webSocketConstructor = ws;
+// --- Database Connection Configuration ---
+// This connects Drizzle ORM to your Neon database using the secret URL.
 
 if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+throw new Error("DATABASE_URL is missing in environment variables. Server cannot connect to Neon.");
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle({ client: pool, schema });
+// 1. Create a PostgreSQL Connection Pool
+const pool = new Pool({
+connectionString: process.env.DATABASE_URL,
+// Note: 'ssl: true' ensures secure connection to Neon.
+ssl: {
+rejectUnauthorized: false
+}
+});
+
+// 2. Initialize Drizzle ORM with the pool and the schema blueprint
+export const db = drizzle(pool, { schema });
+
+// The server can now use 'db' to run queries against Neon.

@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Desi Events Leeds</title>
+  
+  <!-- Load Tailwind CSS via CDN for styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Configure custom Tailwind theme properties if needed -->
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            // Using shades of orange/yellow that match the Desi Events branding
+            'brand-primary': '#f97316', // Orange 600
+            'brand-secondary': '#facc15', // Yellow 400
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+        },
+      },
+    }
+  </script>
+</head>
+<body class="bg-gray-100">
+  <div id="root">
+    <!-- React app will be rendered here -->
+  </div>
+  
+  <!-- 
+    The browser will download and execute this script. 
+    This script is the compiled, bundled version of your entire React application,
+    which starts the application and dynamically injects HTML into the "root" div.
+  -->
+  <script type="module" src="/src/main.jsx"></script>
+</body>
+</html>
+

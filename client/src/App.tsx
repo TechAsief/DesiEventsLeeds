@@ -13,6 +13,7 @@ import EventForm from "@/pages/event-form";
 import AdminDashboard from "@/pages/admin-dashboard";
 import Signup from "@/pages/signup";
 import Login from "@/pages/login";
+import ResetPassword from "@/pages/reset-password";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/signup" component={Signup} />
       <Route path="/login" component={Login} />
+      <Route path="/reset-password" component={ResetPassword} />
       
       {/* Conditional routes based on auth */}
       {isLoading || !isAuthenticated ? (
