@@ -60,10 +60,10 @@ async function seedAdminUser() {
   } catch (error) {
     console.error('❌ Error creating admin user:', error);
     
-    if (error.code === '23505') { // PostgreSQL unique constraint violation
+    if ((error as any).code === '23505') { // PostgreSQL unique constraint violation
       console.log('ℹ️  Admin user already exists (duplicate email detected)');
     } else {
-      console.error('💥 Unexpected error occurred:', error.message);
+      console.error('💥 Unexpected error occurred:', (error as any).message);
     }
     
     process.exit(1);

@@ -56,7 +56,7 @@ router.post('/', async (req, res) => {
     }
 
     // Handle database errors (e.g., duplicate email)
-    if (error.code === '23505') { // PostgreSQL unique constraint violation
+    if ((error as any).code === '23505') { // PostgreSQL unique constraint violation
       return res.status(409).json({
         success: false,
         message: 'Email already exists',

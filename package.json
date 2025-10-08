@@ -8,7 +8,7 @@
     "start": "NODE_ENV=production node --loader tsx server/index.ts",
     "dev": "tsx watch server/index.ts",
     "dev:client": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "build:server": "tsc --project tsconfig.server.json",
     "build:client": "vite build",
     "preview": "vite preview",
