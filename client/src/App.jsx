@@ -1485,7 +1485,7 @@ const App = () => {
             setError(null);
             try {
                 // Hitting the public endpoint we built in the server
-                const response = await fetch('/api/auth/public-events', {
+                const response = await fetch('/api/events/public-events', {
                     credentials: 'include'
                 }); 
                 if (!response.ok) {
