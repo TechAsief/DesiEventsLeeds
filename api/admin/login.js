@@ -1,4 +1,4 @@
-// Vercel Function: User login
+// Vercel Function: Admin login
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -15,29 +15,31 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { email, password } = req.body;
+    const { adminEmail, adminPassword } = req.body;
 
-    // For now, return a simple success response
-    // TODO: Connect to database for real authentication
-    if (email && password) {
+    // Check against environment variables
+    const expectedEmail = process.env.ADMIN_EMAIL;
+    const expectedPassword = process.env.ADMIN_PASSWORD;
+
+    console.log('Admin login attempt:', { adminEmail, expectedEmail });
+
+    if (adminEmail === expectedEmail && adminPassword === expectedPassword) {
       res.status(200).json({
         success: true,
-        message: 'Login successful',
+        message: 'Admin login successful',
         user: {
-          id: 'user-' + Date.now(),
-          email: email,
-          firstName: 'Demo',
-          lastName: 'User'
+          email: adminEmail,
+          role: 'admin'
         }
       });
     } else {
-      res.status(400).json({
+      res.status(401).json({
         success: false,
-        message: 'Email and password are required'
+        message: 'Invalid admin credentials'
       });
     }
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Admin login error:', error);
     res.status(500).json({
       success: false,
       message: 'An unexpected error occurred during communication'
