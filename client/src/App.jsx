@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import ForgotPasswordJS from './components/ForgotPasswordJS';
 import ResetPasswordJS from './pages/ResetPasswordJS';
+import { authHelper } from './lib/auth';
 
 // Utility function to format dates for display
 const formatDate = (dateString, timeString) => {
@@ -485,11 +486,15 @@ const AdminDashboardView = ({ onNavigate, onAdminLogin }) => {
             const response = await fetch('/api/admin/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({ email: adminEmail, password: adminPassword })
+                body: JSON.stringify({ adminEmail, adminPassword })
             });
 
             if (response.ok) {
+                const data = await response.json();
+                if (data.token) {
+                    // Store admin token
+                    authHelper.setToken(data.token);
+                }
                 setIsLoggedIn(true);
                 setMessage('Admin logged in successfully!');
                 setLoginError(''); // Clear any previous errors
@@ -977,7 +982,7 @@ const AuthView = ({ onLoginSuccess, onLoginError }) => {
         setLoading(true);
         setMessage('');
 
-        const endpoint = isLogin ? '/api/auth/login' : '/api/auth';
+        const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
         const body = { email, password };
         if (!isLogin) {
             body.firstName = name.split(' ')[0];
@@ -989,13 +994,18 @@ const AuthView = ({ onLoginSuccess, onLoginError }) => {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body),
-                    credentials: 'include', // Include cookies for session management
                 });
 
             if (response.ok) {
-                setMessage(isLogin ? 'Login successful! Redirecting...' : 'Registration successful! Please log in.');
-                onLoginSuccess();
-                if (!isLogin) {
+                const data = await response.json();
+                
+                if (isLogin && data.token) {
+                    // Store token for login
+                    authHelper.setToken(data.token);
+                    setMessage('Login successful! Redirecting...');
+                    onLoginSuccess();
+                } else if (!isLogin) {
+                    setMessage('Registration successful! Please log in.');
                     setIsLogin(true); // Switch to login after successful register
                 }
             } else {
@@ -1309,27 +1319,30 @@ const App = () => {
     useEffect(() => {
         const checkAuthStatus = async () => {
             try {
+                // Check if we have a token
+                if (!authHelper.isAuthenticated()) {
+                    setIsAuthenticated(false);
+                    setIsAdmin(false);
+                    return;
+                }
+
                 // Check regular user authentication
-                const response = await fetch('/api/auth/status', {
-                    credentials: 'include'
-                });
+                const response = await authHelper.fetchWithAuth('/api/auth/status');
                 const data = await response.json();
                 
-                if (data.success && data.authenticated) {
+                if (data.success && data.isAuthenticated) {
                     setIsAuthenticated(true);
-                    setUserRole(data.user.role); // Store user role
-                    setUserEmail(data.user.email); // Store user email
+                    setUserRole(data.user?.role); // Store user role
+                    setUserEmail(data.user?.email); // Store user email
                 } else {
                     setIsAuthenticated(false);
                     setUserRole(null); // Clear user role
                     setUserEmail(null); // Clear user email
-                    sessionStorage.removeItem('isAuth');
+                    authHelper.clearToken();
                 }
 
                 // Check admin authentication status
-                const adminResponse = await fetch('/api/admin/status', {
-                    credentials: 'include'
-                });
+                const adminResponse = await authHelper.fetchWithAuth('/api/admin/status');
                 const adminData = await adminResponse.json();
                 console.log('🔍 Admin status check on page load:', adminData);
                 setIsAdmin(adminData.isAdmin || false);
@@ -1339,7 +1352,7 @@ const App = () => {
                 setUserRole(null); // Clear user role
                 setUserEmail(null); // Clear user email
                 setIsAdmin(false); // Clear admin status
-                sessionStorage.removeItem('isAuth');
+                authHelper.clearToken();
             }
         };
 
@@ -1389,10 +1402,8 @@ const App = () => {
         const checkAdminStatusOnRouteChange = async () => {
             try {
                 console.log('🔄 Checking admin status for route:', route);
-                // Check admin authentication status
-                const adminResponse = await fetch('/api/admin/status', {
-                    credentials: 'include'
-                });
+                // Check admin authentication status using token
+                const adminResponse = await authHelper.fetchWithAuth('/api/admin/status');
                 const adminData = await adminResponse.json();
                 console.log('🔍 Admin status check on route change:', adminData);
                 setIsAdmin(adminData.isAdmin || false);
@@ -1401,7 +1412,7 @@ const App = () => {
                 if (route === 'admin' && !adminData.isAdmin) {
                     console.log('❌ Not admin, will show login form');
                 } else if (route === 'admin' && adminData.isAdmin) {
-                    console.log('✅ Admin session found, will show dashboard');
+                    console.log('✅ Admin token found, will show dashboard');
                 }
             } catch (error) {
                 console.error('Admin status check failed:', error);
@@ -1413,48 +1424,35 @@ const App = () => {
     }, [route]); // This runs every time the route changes
 
     const handleLoginSuccess = async () => {
-        // Verify the session was created successfully
+        // Verify the token was stored successfully
         try {
-            const response = await fetch('/api/auth/status', {
-                credentials: 'include'
-            });
+            const response = await authHelper.fetchWithAuth('/api/auth/status');
             const data = await response.json();
             
-            if (data.success && data.authenticated) {
-                sessionStorage.setItem('isAuth', 'true');
+            if (data.success && data.isAuthenticated) {
                 setIsAuthenticated(true);
-                setUserRole(data.user.role); // Store user role
-                setUserEmail(data.user.email); // Store user email
+                setUserRole(data.user?.role); // Store user role
+                setUserEmail(data.user?.email); // Store user email
                 
                 // Check admin status after login
-                const adminResponse = await fetch('/api/admin/status', {
-                    credentials: 'include'
-                });
+                const adminResponse = await authHelper.fetchWithAuth('/api/admin/status');
                 const adminData = await adminResponse.json();
                 setIsAdmin(adminData.isAdmin || false);
                 
                 handleNavigate('feed');
             } else {
-                console.error('Session verification failed');
+                console.error('Token verification failed');
                 alert('Login failed. Please try again.');
             }
         } catch (error) {
-            console.error('Session check failed:', error);
+            console.error('Auth check failed:', error);
             alert('Login failed. Please try again.');
         }
     };
 
     const handleLogout = async () => {
-        // In a real app, this would call /api/auth/logout
-        try {
-            await fetch('/api/auth/logout', { 
-                method: 'POST',
-                credentials: 'include' 
-            });
-        } catch (e) {
-            console.error("Logout failed:", e);
-        }
-        sessionStorage.removeItem('isAuth');
+        // Clear token
+        authHelper.clearToken();
         setIsAuthenticated(false);
         setUserRole(null); // Clear user role
         setUserEmail(null); // Clear user email
@@ -1466,9 +1464,7 @@ const App = () => {
         console.log('Admin login callback triggered');
         // Re-check admin status after login
         try {
-            const adminResponse = await fetch('/api/admin/status', {
-                credentials: 'include'
-            });
+            const adminResponse = await authHelper.fetchWithAuth('/api/admin/status');
             const adminData = await adminResponse.json();
             setIsAdmin(adminData.isAdmin || false);
             console.log('Admin status updated:', adminData.isAdmin);
