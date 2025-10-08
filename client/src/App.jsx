@@ -1461,15 +1461,23 @@ const App = () => {
     };
 
     const handleAdminLogin = async () => {
-        console.log('Admin login callback triggered');
+        console.log('🔄 Admin login callback triggered');
+        console.log('🔑 Current token:', authHelper.getToken());
         // Re-check admin status after login
         try {
             const adminResponse = await authHelper.fetchWithAuth('/api/admin/status');
+            console.log('📡 Admin status response:', adminResponse.status);
             const adminData = await adminResponse.json();
+            console.log('📊 Admin status data:', adminData);
             setIsAdmin(adminData.isAdmin || false);
-            console.log('Admin status updated:', adminData.isAdmin);
+            console.log('✅ Admin status updated in state:', adminData.isAdmin);
+            
+            // Also update authenticated state
+            if (adminData.isAdmin) {
+                setIsAuthenticated(true);
+            }
         } catch (error) {
-            console.error('Failed to check admin status:', error);
+            console.error('❌ Failed to check admin status:', error);
             setIsAdmin(false);
         }
     };
