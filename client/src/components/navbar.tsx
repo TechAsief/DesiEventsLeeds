@@ -1,5 +1,5 @@
 import { useLocation } from "wouter";
-import { Calendar, User, LogOut, Plus } from "lucide-react";
+import { Calendar, User, LogOut, Plus, Shield } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
@@ -54,6 +54,12 @@ export default function Navbar() {
   const handleHome = () => {
     setLocation("/");
   };
+
+  const handleAdminDashboard = () => {
+    setLocation("/admin");
+  };
+
+  const isAdmin = user?.role === 'admin';
 
   return (
     <nav className="bg-card border-b border-border sticky top-0 z-50 shadow-sm">
@@ -141,6 +147,15 @@ export default function Navbar() {
                       <User className="mr-2 h-4 w-4" />
                       My Events
                     </DropdownMenuItem>
+                    {isAdmin && (
+                      <>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={handleAdminDashboard} data-testid="menu-admin-dashboard">
+                          <Shield className="mr-2 h-4 w-4" />
+                          Admin Dashboard
+                        </DropdownMenuItem>
+                      </>
+                    )}
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={handleLogout} data-testid="menu-logout">
                       <LogOut className="mr-2 h-4 w-4" />
