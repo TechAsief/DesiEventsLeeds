@@ -139,18 +139,44 @@ router.post('/login', async (req, res) => {
 });
 
 // GET /auth/status - Check if user is authenticated
-router.get('/status', (req, res) => {
+router.get('/status', async (req, res) => {
   if (req.session && req.session.userId) {
-    res.status(200).json({
-      success: true,
-      authenticated: true,
-      user: {
-        id: req.session.userId,
-        email: req.session.userEmail,
-        name: req.session.userName || 'Admin User',
-        role: 'admin',
-      },
-    });
+    try {
+      // Fetch fresh user data from database to get current role
+      const userResult = await db.select().from(users).where(eq(users.id, req.session.userId)).limit(1);
+      
+      if (userResult.length === 0) {
+        // User no longer exists, destroy session
+        req.session.destroy(() => {});
+        return res.status(200).json({
+          success: true,
+          authenticated: false,
+          user: null,
+        });
+      }
+
+      const user = userResult[0];
+      
+      res.status(200).json({
+        success: true,
+        authenticated: true,
+        user: {
+          id: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+          role: user.role || 'poster', // Get actual role from database
+          createdAt: user.createdAt,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      return res.status(500).json({
+        success: false,
+        message: 'Error fetching user data',
+      });
+    }
   } else {
     res.status(200).json({
       success: true,
