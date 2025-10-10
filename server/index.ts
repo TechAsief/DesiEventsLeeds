@@ -61,7 +61,7 @@ const sessionStore = new (MemoryStore(session))({
 app.use(
   session({
     store: sessionStore,
-    secret: process.env.SESSION_SECRET || 'dev-secret-change-me',
+    secret: process.env.SESSION_SECRET || 'a9f2e8d1c7b4a6f3e9d2c8b5a7f4e0d3c9b6a8f5e2d4c0b7a9f6e3d5c1b8a4f7e0d3c6a9b2e5f8c1d4a7e0b3f6c9d2a5e8b1c4f7',
     resave: false,
     saveUninitialized: true,
     name: 'connect.sid',

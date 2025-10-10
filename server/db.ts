@@ -12,13 +12,16 @@ console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
 console.log('SESSION_SECRET exists:', !!process.env.SESSION_SECRET);
 console.log('All env keys:', Object.keys(process.env).filter(key => key.includes('DATABASE') || key.includes('SESSION') || key.includes('NODE')));
 
-if (!process.env.DATABASE_URL) {
+// Temporary hardcoded values for Railway deployment
+const DATABASE_URL = process.env.DATABASE_URL || 'postgresql://neondb_owner:npg_03huswKprzFZ@ep-quiet-meadow-agic1qhk.c-2.eu-central-1.aws.neon.tech/neondb?sslmode=require';
+
+if (!DATABASE_URL) {
 throw new Error("DATABASE_URL is missing in environment variables. Server cannot connect to Neon.");
 }
 
 // 1. Create a PostgreSQL Connection Pool
 const pool = new Pool({
-connectionString: process.env.DATABASE_URL,
+connectionString: DATABASE_URL,
 // Note: 'ssl: true' ensures secure connection to Neon.
 ssl: {
 rejectUnauthorized: false
