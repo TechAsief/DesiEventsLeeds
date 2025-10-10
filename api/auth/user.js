@@ -1,8 +1,7 @@
-// Vercel Serverless Function - User Login
+// Vercel Serverless Function - Get Current User
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import { eq } from 'drizzle-orm';
-import bcrypt from 'bcrypt';
 import * as schema from '../../shared/schema.js';
 
 export default async function handler(req, res) {
@@ -17,56 +16,44 @@ export default async function handler(req, res) {
     return;
   }
 
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method not allowed' });
-  }
-
   let pool;
   try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({
+    // Check for authorization header
+    const authHeader = req.headers.authorization;
+    
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return res.status(401).json({
         success: false,
-        message: 'Email and password are required'
+        message: 'No token provided'
       });
     }
 
+    const token = authHeader.substring(7);
+    
+    // Decode token
+    const decoded = Buffer.from(token, 'base64').toString('utf-8');
+    const [email] = decoded.split(':');
+    
     // Connect to database
     pool = new Pool({
       connectionString: process.env.DATABASE_URL,
     });
     const db = drizzle(pool, { schema });
 
-    // Find user by email
+    // Get user from database
     const userResult = await db.select().from(schema.users).where(eq(schema.users.email, email)).limit(1);
-
+    
     if (userResult.length === 0) {
-      return res.status(401).json({
+      return res.status(404).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'User not found'
       });
     }
 
     const user = userResult[0];
-
-    // Compare password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-
-    if (!isPasswordValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password'
-      });
-    }
-
-    // Create token (simple base64 for now)
-    const token = Buffer.from(`${email}:${Date.now()}`).toString('base64');
-
+    
     res.status(200).json({
       success: true,
-      message: 'Login successful',
-      token: token,
       user: {
         id: user.id,
         email: user.email,
@@ -78,7 +65,7 @@ export default async function handler(req, res) {
     });
 
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('Get user error:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
