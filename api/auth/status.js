@@ -1,7 +1,8 @@
 // Vercel Serverless Function - Auth Status
-import { db } from '../../server/db.js';
-import { users } from '../../shared/schema.js';
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
 import { eq } from 'drizzle-orm';
+import * as schema from '../../shared/schema.js';
 
 export default async function handler(req, res) {
   // Set CORS headers
@@ -28,7 +29,11 @@ export default async function handler(req, res) {
         const [email] = decoded.split(':');
         
         // Get user from database
-        const userResult = await db.select().from(users).where(eq(users.email, email)).limit(1);
+        const pool = new Pool({
+          connectionString: process.env.DATABASE_URL,
+        });
+        const db = drizzle(pool, { schema });
+        const userResult = await db.select().from(schema.users).where(eq(schema.users.email, email)).limit(1);
         
         if (userResult.length === 0) {
           return res.status(200).json({
@@ -52,6 +57,8 @@ export default async function handler(req, res) {
             createdAt: user.createdAt
           }
         });
+        
+        await pool.end();
       } catch (e) {
         res.status(200).json({
           success: true,
