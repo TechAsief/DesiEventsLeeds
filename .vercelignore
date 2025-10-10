@@ -1,0 +1,14 @@
+node_modules
+.env
+.env.local
+dist
+.git
+*.log
+.DS_Store
+server.log
+admin-cookies.txt
+cookies.txt
+make-me-admin-now.ts
+check-user-role.ts
+fix-typescript-errors.js
+
