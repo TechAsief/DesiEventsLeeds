@@ -1,4 +1,5 @@
 // Token-based authentication helper for serverless deployment
+import { getApiUrl } from './config';
 
 export const authHelper = {
   // Store authentication token
@@ -37,7 +38,7 @@ export const authHelper = {
       ...options.headers,
     };
 
-    return fetch(url, {
+    return fetch(getApiUrl(url), {
       ...options,
       headers,
     });

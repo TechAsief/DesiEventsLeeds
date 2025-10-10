@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import ForgotPasswordJS from './components/ForgotPasswordJS';
 import ResetPasswordJS from './pages/ResetPasswordJS';
 import { authHelper } from './lib/auth';
+import { getApiUrl } from './lib/config';
 
 // Utility function to format dates for display
 const formatDate = (dateString, timeString) => {
@@ -217,7 +218,7 @@ const EventFormView = ({ onEventCreated, onSuccess }) => {
         setMessage('');
 
         try {
-            const response = await fetch('/api/events', {
+            const response = await fetch(getApiUrl('/api/events'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData),
@@ -483,7 +484,7 @@ const AdminDashboardView = ({ onNavigate, onAdminLogin }) => {
         setLoginError('');
 
         try {
-            const response = await fetch('/api/admin/login', {
+            const response = await fetch(getApiUrl('/api/admin/login'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ adminEmail, adminPassword })
@@ -517,7 +518,7 @@ const AdminDashboardView = ({ onNavigate, onAdminLogin }) => {
 
     const fetchPendingEvents = async () => {
         try {
-            const response = await fetch('/api/admin/pending', {
+            const response = await fetch(getApiUrl('/api/admin/pending'), {
                 credentials: 'include'
             });
             const data = await response.json();
@@ -534,7 +535,7 @@ const AdminDashboardView = ({ onNavigate, onAdminLogin }) => {
 
     const fetchAnalytics = async () => {
         try {
-            const response = await fetch('/api/admin/analytics/summary', {
+            const response = await fetch(getApiUrl('/api/admin/analytics/summary'), {
                 credentials: 'include'
             });
             const data = await response.json();
@@ -552,7 +553,7 @@ const AdminDashboardView = ({ onNavigate, onAdminLogin }) => {
         try {
             console.log('🔄 Fetching all events...');
             console.log('🍪 Document cookies:', document.cookie);
-            const response = await fetch('/api/admin/events', {
+            const response = await fetch(getApiUrl('/api/admin/events'), {
                 credentials: 'include'
             });
             console.log('📡 Response status:', response.status);
@@ -577,7 +578,7 @@ const AdminDashboardView = ({ onNavigate, onAdminLogin }) => {
         }
 
         try {
-            const response = await fetch(`/api/admin/events/${eventId}`, {
+            const response = await fetch(getApiUrl(`/api/admin/events/${eventId}`), {
                 method: 'DELETE',
                 credentials: 'include'
             });
@@ -599,7 +600,7 @@ const AdminDashboardView = ({ onNavigate, onAdminLogin }) => {
 
     const approveEvent = async (eventId) => {
         try {
-            const response = await fetch(`/api/admin/approve/${eventId}`, {
+            const response = await fetch(getApiUrl(`/api/admin/approve/${eventId}`), {
                 method: 'POST',
                 credentials: 'include'
             });
@@ -1490,7 +1491,7 @@ const App = () => {
             try {
                 // Try API first, fallback to sample data
                 try {
-                    const response = await fetch('/api/events/public-events', {
+                    const response = await fetch(getApiUrl('/api/events/public-events'), {
                     credentials: 'include'
                 }); 
                     if (response.ok) {
