@@ -1,7 +1,12 @@
-// Vercel Function: User registration
+// Vercel Serverless Function - User Registration
+import { db } from '../../server/db.js';
+import { users } from '../../shared/schema.js';
+import bcrypt from 'bcrypt';
+
 export default async function handler(req, res) {
   // Set CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
 
@@ -17,7 +22,6 @@ export default async function handler(req, res) {
   try {
     const { email, password, firstName, lastName } = req.body;
 
-    // Basic validation
     if (!email || !password || !firstName || !lastName) {
       return res.status(400).json({
         success: false,
@@ -25,29 +29,50 @@ export default async function handler(req, res) {
       });
     }
 
-    if (password.length < 6) {
-      return res.status(400).json({
+    // Check if user already exists
+    const existingUser = await db.select().from(users).where(eq(users.email, email)).limit(1);
+
+    if (existingUser.length > 0) {
+      return res.status(409).json({
         success: false,
-        message: 'Password must be at least 6 characters'
+        message: 'Email already exists'
       });
     }
 
-    // For now, return success (TODO: Connect to database)
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user
+    const newUser = await db.insert(users).values({
+      email,
+      password: hashedPassword,
+      firstName,
+      lastName,
+      role: 'poster' // Default role
+    }).returning();
+
+    // Create token
+    const token = Buffer.from(`${email}:${Date.now()}`).toString('base64');
+
     res.status(201).json({
       success: true,
-      message: 'User registered successfully',
+      message: 'User created successfully',
+      token: token,
       user: {
-        id: 'user-' + Date.now(),
-        email: email,
-        firstName: firstName,
-        lastName: lastName
+        id: newUser[0].id,
+        email: newUser[0].email,
+        firstName: newUser[0].firstName,
+        lastName: newUser[0].lastName,
+        role: newUser[0].role,
+        createdAt: newUser[0].createdAt
       }
     });
+
   } catch (error) {
     console.error('Registration error:', error);
     res.status(500).json({
       success: false,
-      message: 'An unexpected error occurred during communication'
+      message: 'Internal server error'
     });
   }
 }
