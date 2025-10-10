@@ -9,8 +9,13 @@ import adminRouter from './routes/admin.js';
 
 // --- STANDARD SETUP & CONFIGURATION ---
 
-const PORT = Number(process.env.PORT || 3000);
+const PORT = Number(process.env.PORT || 8080);
 const NODE_ENV = process.env.NODE_ENV || 'development';
+
+// Debug: Log port information
+console.log('Port configuration:');
+console.log('process.env.PORT:', process.env.PORT);
+console.log('Using PORT:', PORT);
 
 const app = express();
 
