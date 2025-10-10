@@ -1,13 +1,8 @@
 // Configuration for API endpoints
 // This will be updated once we have the Railway URL
 
-const isDevelopment = import.meta.env.DEV;
-
-// For development, use local server
-// For production, use Railway backend
-export const API_BASE_URL = isDevelopment 
-  ? 'http://localhost:5000' 
-  : 'https://desieventsleeds-production.up.railway.app';
+// Always use Railway backend for now
+export const API_BASE_URL = 'https://desieventsleeds-production.up.railway.app';
 
 export const getApiUrl = (endpoint: string) => {
   // If endpoint already starts with http, use it as-is
