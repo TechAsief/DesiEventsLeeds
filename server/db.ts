@@ -1,7 +1,6 @@
 import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from '../shared/schema.js';
-import 'dotenv/config';
 
 // --- Database Connection Configuration ---
 // This connects Drizzle ORM to your Neon database using the secret URL.
