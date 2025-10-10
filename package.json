@@ -4,6 +4,9 @@
   "description": "MVP for posting and discovering Indian community events in Leeds.",
   "main": "server/index.ts",
   "type": "module",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "start": "NODE_ENV=production node --loader tsx server/index.ts",
     "dev": "tsx watch server/index.ts",
