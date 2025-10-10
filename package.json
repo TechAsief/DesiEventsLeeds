@@ -8,7 +8,7 @@
     "node": "22.x"
   },
   "scripts": {
-    "start": "NODE_ENV=production node --loader tsx server/index.ts",
+    "start": "NODE_ENV=production node --import tsx server/index.ts",
     "dev": "tsx watch server/index.ts",
     "dev:client": "vite",
     "build": "vite build",
