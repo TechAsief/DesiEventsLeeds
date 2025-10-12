@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { API_BASE_URL } from "@/lib/config";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import type { Event } from "@shared/schema";
@@ -28,7 +29,7 @@ export default function MyEvents() {
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
+        window.location.href = `${API_BASE_URL}/api/login`;
       }, 500);
       return;
     }
@@ -58,7 +59,7 @@ export default function MyEvents() {
           variant: "destructive",
         });
         setTimeout(() => {
-          window.location.href = "/api/login";
+          window.location.href = `${API_BASE_URL}/api/login`;
         }, 500);
         return;
       }

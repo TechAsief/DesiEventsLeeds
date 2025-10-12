@@ -5,7 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useToast } from "@/hooks/use-toast";
-import { getApiUrl } from "@/lib/config";
+import { getApiUrl, API_BASE_URL } from "@/lib/config";
 import Navbar from "@/components/navbar";
 import SearchFilters from "@/components/search-filters";
 import EventCard from "@/components/event-card";
@@ -27,7 +27,7 @@ export default function Home() {
         variant: "destructive",
       });
       setTimeout(() => {
-        window.location.href = "/api/login";
+        window.location.href = `${API_BASE_URL}/api/login`;
       }, 500);
       return;
     }
