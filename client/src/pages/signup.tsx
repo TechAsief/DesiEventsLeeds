@@ -34,11 +34,11 @@ export default function Signup() {
 
   const signupMutation = useMutation({
     mutationFn: async (data: SignupData) => {
-      const response = await apiRequest("POST", "/api/signup", data);
+      const response = await apiRequest("POST", "/api/auth", data);
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/status"] });
       toast({
         title: "Account created!",
         description: "Welcome to Desi Events Leeds",

@@ -19,10 +19,10 @@ export default function Navbar() {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "/api/logout", {});
+      await apiRequest("POST", "/api/auth/logout", {});
     },
     onSuccess: () => {
-      queryClient.removeQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.removeQueries({ queryKey: ["/api/auth/status"] });
       setLocation("/");
     },
   });

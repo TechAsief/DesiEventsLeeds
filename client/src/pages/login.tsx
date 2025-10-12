@@ -34,11 +34,11 @@ export default function Login() {
 
   const loginMutation = useMutation({
     mutationFn: async (data: LoginData) => {
-      const response = await apiRequest("POST", "/api/login", data);
+      const response = await apiRequest("POST", "/api/auth/login", data);
       return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/status"] });
       toast({
         title: "Welcome back!",
         description: "You're now logged in",

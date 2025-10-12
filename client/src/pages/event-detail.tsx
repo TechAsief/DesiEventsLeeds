@@ -46,7 +46,7 @@ export default function EventDetail() {
         title: "Success",
         description: "Event deleted successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/my-events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events/my"] });
       setLocation("/my-events");
     },
     onError: (error) => {

@@ -36,7 +36,7 @@ export default function MyEvents() {
   }, [isAuthenticated, isLoading, toast]);
 
   const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
-    queryKey: ["/api/my-events"],
+    queryKey: ["/api/events/my"],
     enabled: isAuthenticated,
   });
 
@@ -49,7 +49,7 @@ export default function MyEvents() {
         title: "Success",
         description: "Event deleted successfully",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/my-events"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/events/my"] });
     },
     onError: (error) => {
       if (isUnauthorizedError(error)) {

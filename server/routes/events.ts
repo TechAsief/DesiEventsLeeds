@@ -1,6 +1,7 @@
 import express from 'express';
 import { db } from '../db.js';
 import { events, insertEventSchema } from '../../shared/schema.js';
+import { eq, and, desc } from 'drizzle-orm';
 
 const router = express.Router();
 
@@ -82,6 +83,176 @@ router.post('/', requireAuth, async (req, res) => {
     }
 
     // Handle other errors
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+});
+
+// GET /events/my - Get current user's events (requires authentication)
+router.get('/my', requireAuth, async (req, res) => {
+  try {
+    const userId = req.session.userId!;
+    
+    // Get all events created by the current user
+    const userEvents = await db
+      .select()
+      .from(events)
+      .where(eq(events.userId, userId))
+      .orderBy(desc(events.createdAt));
+
+    res.status(200).json(userEvents);
+  } catch (error) {
+    console.error('Error fetching user events:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+});
+
+// GET /events/:id - Get a single event by ID
+router.get('/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const event = await db
+      .select()
+      .from(events)
+      .where(eq(events.id, id))
+      .limit(1);
+
+    if (event.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found',
+      });
+    }
+
+    res.status(200).json(event[0]);
+  } catch (error) {
+    console.error('Error fetching event:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+});
+
+// GET /events - Get all approved events (public)
+router.get('/', async (req, res) => {
+  try {
+    const { search, filter } = req.query;
+    
+    let query = db.select().from(events).where(
+      and(
+        eq(events.approvalStatus, 'approved'),
+        eq(events.isActive, true)
+      )
+    );
+
+    // Add search filter if provided
+    // Add date filter if provided
+    // This is simplified - you can add more complex filtering
+
+    const allEvents = await query.orderBy(events.date);
+
+    res.status(200).json(allEvents);
+  } catch (error) {
+    console.error('Error fetching events:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+});
+
+// PATCH /events/:id - Update an event (requires authentication)
+router.patch('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.session.userId!;
+    
+    // Validate the request body
+    const validatedData = insertEventSchema.partial().parse(req.body);
+
+    // Check if event exists and belongs to user
+    const existingEvent = await db
+      .select()
+      .from(events)
+      .where(and(eq(events.id, id), eq(events.userId, userId)))
+      .limit(1);
+
+    if (existingEvent.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found or unauthorized',
+      });
+    }
+
+    // Update the event
+    const updatedEvent = await db
+      .update(events)
+      .set({
+        ...validatedData,
+        approvalStatus: 'pending', // Reset to pending after edit
+      })
+      .where(eq(events.id, id))
+      .returning();
+
+    res.status(200).json({
+      success: true,
+      message: 'Event updated successfully',
+      event: updatedEvent[0],
+    });
+  } catch (error) {
+    console.error('Error updating event:', error);
+    
+    if (error instanceof Error && error.name === 'ZodError') {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid event data',
+        errors: (error as any).errors,
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      message: 'Internal server error',
+    });
+  }
+});
+
+// DELETE /events/:id - Delete an event (requires authentication)
+router.delete('/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = req.session.userId!;
+    
+    // Check if event exists and belongs to user
+    const existingEvent = await db
+      .select()
+      .from(events)
+      .where(and(eq(events.id, id), eq(events.userId, userId)))
+      .limit(1);
+
+    if (existingEvent.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Event not found or unauthorized',
+      });
+    }
+
+    // Delete the event
+    await db.delete(events).where(eq(events.id, id));
+
+    res.status(200).json({
+      success: true,
+      message: 'Event deleted successfully',
+    });
+  } catch (error) {
+    console.error('Error deleting event:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',
