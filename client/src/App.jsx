@@ -1004,9 +1004,15 @@ const AuthView = ({ onLoginSuccess, onLoginError }) => {
                 if (isLogin) {
                     // Session-based auth - cookie is set by backend
                     setMessage('Login successful! Redirecting...');
+                    // Set authenticated state immediately since login succeeded
+                    setIsAuthenticated(true);
+                    setUserRole(data.user?.role);
+                    setUserEmail(data.user?.email);
+                    
+                    // Navigate to feed after a short delay
                     setTimeout(() => {
-                        onLoginSuccess();
-                    }, 500);
+                        handleNavigate('feed');
+                    }, 1000);
                 } else if (!isLogin) {
                     setMessage('Registration successful! Please log in.');
                     setIsLogin(true); // Switch to login after successful register
@@ -1414,12 +1420,17 @@ const App = () => {
     }, [route]); // This runs every time the route changes
 
     const handleLoginSuccess = async () => {
+        // Give session a moment to be established
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         // Verify session was created successfully
         try {
             const response = await fetch(getApiUrl('/api/auth/status'), {
                 credentials: 'include'
             });
             const data = await response.json();
+            
+            console.log('Session verification response:', data);
             
             if (data.success && data.authenticated) {
                 setIsAuthenticated(true);
@@ -1428,12 +1439,14 @@ const App = () => {
                 
                 handleNavigate('feed');
             } else {
-                console.error('Session verification failed');
-                alert('Login failed. Please try again.');
+                console.error('Session verification failed:', data);
+                // Don't show alert, just set authenticated state based on response
+                setIsAuthenticated(false);
             }
         } catch (error) {
             console.error('Auth check failed:', error);
-            alert('Login failed. Please try again.');
+            // Don't show alert, just set authenticated state
+            setIsAuthenticated(false);
         }
     };
 
