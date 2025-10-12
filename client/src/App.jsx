@@ -10,7 +10,8 @@ function App() {
   const [message, setMessage] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [currentRoute, setCurrentRoute] = useState('feed');
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [events, setEvents] = useState([]);
@@ -98,7 +99,9 @@ function App() {
       const endpoint = isLogin ? '/api/auth/login' : '/api/auth';
       const body = isLogin 
         ? { email, password }
-        : { name, email, password };
+        : { firstName, lastName, email, password };
+
+      console.log('Auth request:', { endpoint, body: isLogin ? { email, password: '***' } : { firstName, lastName, email, password: '***' } });
 
       const response = await fetch(getApiUrl(endpoint), {
         method: 'POST',
@@ -246,16 +249,28 @@ function App() {
       </h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         {!isLogin && (
-          <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-              required
-            />
-          </div>
+          <>
+            <div>
+              <label className="block text-sm font-medium mb-1">First Name</label>
+              <input
+                type="text"
+                value={firstName}
+                onChange={(e) => setFirstName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium mb-1">Last Name</label>
+              <input
+                type="text"
+                value={lastName}
+                onChange={(e) => setLastName(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                required
+              />
+            </div>
+          </>
         )}
         <div>
           <label className="block text-sm font-medium mb-1">Email</label>
