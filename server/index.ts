@@ -26,18 +26,31 @@ app.use(helmet());
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-  'http://localhost:3000'
+  'http://localhost:3000',
+  // Add your Vercel domains here
+  /https:\/\/.*\.vercel\.app$/,  // All Vercel preview deployments
 ];
+
 app.use(
   cors({
     origin: (origin, callback) => {
       // Allow requests with no origin (like mobile apps or curl requests)
       if (!origin) return callback(null, true);
       
-      if (allowedOrigins.includes(origin)) {
+      // Check if origin matches any allowed origins (string or regex)
+      const isAllowed = allowedOrigins.some(allowedOrigin => {
+        if (typeof allowedOrigin === 'string') {
+          return allowedOrigin === origin;
+        }
+        // If it's a regex pattern
+        return allowedOrigin.test(origin);
+      });
+      
+      if (isAllowed) {
         return callback(null, true);
       }
       
+      console.log('❌ CORS blocked origin:', origin);
       return callback(new Error('Not allowed by CORS'));
     },
     credentials: true,
@@ -72,8 +85,8 @@ app.use(
     name: 'connect.sid',
     cookie: {
       httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
+      sameSite: NODE_ENV === 'production' ? 'none' : 'lax',
+      secure: NODE_ENV === 'production', // true in production for HTTPS
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       path: '/',
     },
