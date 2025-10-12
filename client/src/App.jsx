@@ -1001,11 +1001,12 @@ const AuthView = ({ onLoginSuccess, onLoginError }) => {
             if (response.ok) {
                 const data = await response.json();
                 
-                if (isLogin && data.token) {
-                    // Store token for login
-                    authHelper.setToken(data.token);
+                if (isLogin) {
+                    // Session-based auth - cookie is set by backend
                     setMessage('Login successful! Redirecting...');
-                    onLoginSuccess();
+                    setTimeout(() => {
+                        onLoginSuccess();
+                    }, 500);
                 } else if (!isLogin) {
                     setMessage('Registration successful! Please log in.');
                     setIsLogin(true); // Switch to login after successful register
@@ -1321,18 +1322,13 @@ const App = () => {
     useEffect(() => {
         const checkAuthStatus = async () => {
             try {
-                // Check if we have a token
-                if (!authHelper.isAuthenticated()) {
-                    setIsAuthenticated(false);
-                    setIsAdmin(false);
-                    return;
-                }
-
-                // Check regular user authentication
-                const response = await authHelper.fetchWithAuth('/api/auth/status');
+                // Check regular user authentication using session cookie
+                const response = await fetch(getApiUrl('/api/auth/status'), {
+                    credentials: 'include'
+                });
                 const data = await response.json();
                 
-                if (data.success && data.isAuthenticated) {
+                if (data.success && data.authenticated) {
                     setIsAuthenticated(true);
                     setUserRole(data.user?.role); // Store user role
                     setUserEmail(data.user?.email); // Store user email
@@ -1340,21 +1336,13 @@ const App = () => {
                     setIsAuthenticated(false);
                     setUserRole(null); // Clear user role
                     setUserEmail(null); // Clear user email
-                    authHelper.clearToken();
                 }
-
-                // Check admin authentication status
-                const adminResponse = await authHelper.fetchWithAuth('/api/admin/status');
-                const adminData = await adminResponse.json();
-                console.log('🔍 Admin status check on page load:', adminData);
-                setIsAdmin(adminData.isAdmin || false);
             } catch (error) {
                 console.error('Auth check failed:', error);
                 setIsAuthenticated(false);
                 setUserRole(null); // Clear user role
                 setUserEmail(null); // Clear user email
                 setIsAdmin(false); // Clear admin status
-                authHelper.clearToken();
             }
         };
 
@@ -1426,24 +1414,21 @@ const App = () => {
     }, [route]); // This runs every time the route changes
 
     const handleLoginSuccess = async () => {
-        // Verify the token was stored successfully
+        // Verify session was created successfully
         try {
-            const response = await authHelper.fetchWithAuth('/api/auth/status');
+            const response = await fetch(getApiUrl('/api/auth/status'), {
+                credentials: 'include'
+            });
             const data = await response.json();
             
-            if (data.success && data.isAuthenticated) {
+            if (data.success && data.authenticated) {
                 setIsAuthenticated(true);
                 setUserRole(data.user?.role); // Store user role
                 setUserEmail(data.user?.email); // Store user email
                 
-                // Check admin status after login
-                const adminResponse = await authHelper.fetchWithAuth('/api/admin/status');
-                const adminData = await adminResponse.json();
-                setIsAdmin(adminData.isAdmin || false);
-                
                 handleNavigate('feed');
             } else {
-                console.error('Token verification failed');
+                console.error('Session verification failed');
                 alert('Login failed. Please try again.');
             }
         } catch (error) {
@@ -1453,8 +1438,17 @@ const App = () => {
     };
 
     const handleLogout = async () => {
-        // Clear token
-        authHelper.clearToken();
+        try {
+            // Call logout endpoint to clear session
+            await fetch(getApiUrl('/api/auth/logout'), {
+                method: 'POST',
+                credentials: 'include'
+            });
+        } catch (error) {
+            console.error('Logout error:', error);
+        }
+        
+        // Clear local state
         setIsAuthenticated(false);
         setUserRole(null); // Clear user role
         setUserEmail(null); // Clear user email
