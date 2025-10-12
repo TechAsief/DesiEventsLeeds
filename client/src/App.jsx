@@ -983,7 +983,7 @@ const AuthView = ({ onLoginSuccess, onLoginError }) => {
         setLoading(true);
         setMessage('');
 
-        const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
+        const endpoint = isLogin ? '/api/auth/login' : '/api/auth';
         const body = { email, password };
         if (!isLogin) {
             body.firstName = name.split(' ')[0];
@@ -991,10 +991,11 @@ const AuthView = ({ onLoginSuccess, onLoginError }) => {
         }
 
         try {
-                const response = await fetch(endpoint, {
+                const response = await fetch(getApiUrl(endpoint), {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(body),
+                    credentials: 'include'
                 });
 
             if (response.ok) {
@@ -1491,7 +1492,7 @@ const App = () => {
             try {
                 // Try API first, fallback to sample data
                 try {
-                    const response = await fetch(getApiUrl('/api/events/public-events'), {
+                    const response = await fetch(getApiUrl('/api/events'), {
                     credentials: 'include'
                 }); 
                     if (response.ok) {
