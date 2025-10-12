@@ -318,20 +318,44 @@ function App() {
     setEventSubmitMessage('');
 
     try {
+      // Prepare the data, converting empty strings to null for optional fields
+      const eventData = {
+        ...eventFormData,
+        contactPhone: eventFormData.contactPhone || null,
+        bookingLink: eventFormData.bookingLink || null,
+        imageUrl: eventFormData.imageUrl || null,
+      };
+
+      console.log('Submitting event data:', eventData);
+
       const response = await fetch(getApiUrl('/api/events'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify(eventFormData)
+        body: JSON.stringify(eventData)
       });
 
       if (response.ok) {
         setEventSubmitMessage('Event created successfully! Waiting for admin approval.');
+        // Reset form
+        setEventFormData({
+          title: '',
+          date: '',
+          time: '',
+          locationText: '',
+          description: '',
+          contactEmail: userEmail || '',
+          contactPhone: '',
+          bookingLink: '',
+          category: '',
+          imageUrl: ''
+        });
         setTimeout(() => {
           handleNavigate('my-events');
         }, 2000);
       } else {
         const errorData = await response.json();
+        console.error('Event creation failed:', errorData);
         setEventSubmitMessage(errorData.message || 'Failed to create event');
       }
     } catch (error) {
