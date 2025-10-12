@@ -15,6 +15,22 @@ function App() {
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  
+  // Event form state
+  const [eventFormData, setEventFormData] = useState({
+    title: '',
+    date: '',
+    time: '',
+    locationText: '',
+    description: '',
+    contactEmail: '',
+    contactPhone: '',
+    bookingLink: '',
+    category: '',
+    imageUrl: ''
+  });
+  const [eventSubmitLoading, setEventSubmitLoading] = useState(false);
+  const [eventSubmitMessage, setEventSubmitMessage] = useState('');
 
   // Check authentication status on app load
   useEffect(() => {
@@ -285,10 +301,207 @@ function App() {
     </div>
   );
 
+  // Update contact email when user logs in
+  useEffect(() => {
+    if (userEmail && !eventFormData.contactEmail) {
+      setEventFormData(prev => ({ ...prev, contactEmail: userEmail }));
+    }
+  }, [userEmail]);
+
+  const handleEventFormChange = (field, value) => {
+    setEventFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleEventSubmit = async (e) => {
+    e.preventDefault();
+    setEventSubmitLoading(true);
+    setEventSubmitMessage('');
+
+    try {
+      const response = await fetch(getApiUrl('/api/events'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(eventFormData)
+      });
+
+      if (response.ok) {
+        setEventSubmitMessage('Event created successfully! Waiting for admin approval.');
+        setTimeout(() => {
+          handleNavigate('my-events');
+        }, 2000);
+      } else {
+        const errorData = await response.json();
+        setEventSubmitMessage(errorData.message || 'Failed to create event');
+      }
+    } catch (error) {
+      console.error('Event creation error:', error);
+      setEventSubmitMessage('Network error. Please try again.');
+    } finally {
+      setEventSubmitLoading(false);
+    }
+  };
+
+  const renderEventForm = () => {
+
+    return (
+      <div className="max-w-4xl mx-auto p-6">
+        <h2 className="text-3xl font-bold mb-6">Create New Event</h2>
+        <form onSubmit={handleEventSubmit} className="space-y-6 bg-white p-8 rounded-lg shadow">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">Event Title *</label>
+              <input
+                type="text"
+                value={eventFormData.title}
+                onChange={(e) => handleEventFormChange('title', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Date *</label>
+              <input
+                type="date"
+                value={eventFormData.date}
+                onChange={(e) => handleEventFormChange('date', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Time *</label>
+              <input
+                type="time"
+                value={eventFormData.time}
+                onChange={(e) => handleEventFormChange('time', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                required
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">Location *</label>
+              <input
+                type="text"
+                value={eventFormData.locationText}
+                onChange={(e) => handleEventFormChange('locationText', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="e.g., Leeds City Centre, Millennium Square"
+                required
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">Description *</label>
+              <textarea
+                value={eventFormData.description}
+                onChange={(e) => handleEventFormChange('description', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                rows="4"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Category *</label>
+              <select
+                value={eventFormData.category}
+                onChange={(e) => handleEventFormChange('category', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                required
+              >
+                <option value="">Select a category</option>
+                <option value="cultural">Cultural</option>
+                <option value="religious">Religious</option>
+                <option value="social">Social</option>
+                <option value="educational">Educational</option>
+                <option value="sports">Sports</option>
+                <option value="food">Food & Dining</option>
+                <option value="music">Music & Dance</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Contact Email *</label>
+              <input
+                type="email"
+                value={eventFormData.contactEmail}
+                onChange={(e) => handleEventFormChange('contactEmail', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Contact Phone</label>
+              <input
+                type="tel"
+                value={eventFormData.contactPhone}
+                onChange={(e) => handleEventFormChange('contactPhone', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Booking Link</label>
+              <input
+                type="url"
+                value={eventFormData.bookingLink}
+                onChange={(e) => handleEventFormChange('bookingLink', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="https://..."
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <label className="block text-sm font-medium mb-2">Image URL</label>
+              <input
+                type="url"
+                value={eventFormData.imageUrl}
+                onChange={(e) => handleEventFormChange('imageUrl', e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                placeholder="https://..."
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              type="submit"
+              disabled={eventSubmitLoading}
+              className="px-6 py-3 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
+            >
+              {eventSubmitLoading ? 'Creating...' : 'Create Event'}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleNavigate('feed')}
+              className="px-6 py-3 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+          </div>
+
+          {eventSubmitMessage && (
+            <div className={`mt-4 p-3 rounded ${eventSubmitMessage.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+              {eventSubmitMessage}
+            </div>
+          )}
+        </form>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     switch (currentRoute) {
       case 'login':
         return renderLoginForm();
+      case 'create-event':
+        return renderEventForm();
       case 'feed':
       default:
         return renderEventsFeed();
