@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { getApiUrl } from '@/lib/config';
 
 const ForgotPasswordJS = ({ onBack }) => {
     const [email, setEmail] = useState('');
@@ -12,7 +13,7 @@ const ForgotPasswordJS = ({ onBack }) => {
         setMessage('');
 
         try {
-            const response = await fetch('/api/auth/forgot-password', {
+            const response = await fetch(getApiUrl('/api/auth/forgot-password'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email }),

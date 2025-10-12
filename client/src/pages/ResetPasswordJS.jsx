@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { getApiUrl } from '@/lib/config';
 
 const ResetPasswordJS = () => {
     const [token, setToken] = useState(null);
@@ -36,7 +37,7 @@ const ResetPasswordJS = () => {
         }
 
         try {
-            const response = await fetch('/api/auth/reset-password', {
+            const response = await fetch(getApiUrl('/api/auth/reset-password'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ token, password }),

@@ -5,6 +5,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useToast } from "@/hooks/use-toast";
+import { getApiUrl } from "@/lib/config";
 import Navbar from "@/components/navbar";
 import SearchFilters from "@/components/search-filters";
 import EventCard from "@/components/event-card";
@@ -39,7 +40,9 @@ export default function Home() {
       if (searchQuery) params.append("search", searchQuery);
       if (dateFilter) params.append("filter", dateFilter);
       
-      const response = await fetch(`/api/events?${params}`);
+      const response = await fetch(getApiUrl(`/api/events?${params}`), {
+        credentials: 'include'
+      });
       if (!response.ok) throw new Error("Failed to fetch events");
       return response.json() as Promise<Event[]>;
     }

@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { getApiUrl } from "@/lib/config";
 import { insertEventSchema, type InsertEvent, type Event } from "@shared/schema";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
@@ -56,7 +57,9 @@ export default function EventForm() {
   const { data: existingEvent, isLoading: eventLoading } = useQuery({
     queryKey: ["/api/events", id],
     queryFn: async () => {
-      const response = await fetch(`/api/events/${id}`);
+      const response = await fetch(getApiUrl(`/api/events/${id}`), {
+        credentials: 'include'
+      });
       if (!response.ok) throw new Error("Failed to fetch event");
       return response.json() as Promise<Event>;
     },
@@ -318,7 +321,7 @@ export default function EventForm() {
                       maxNumberOfFiles={1}
                       maxFileSize={5242880}
                       onGetUploadParameters={async () => {
-                        const response = await fetch('/api/objects/upload', {
+                        const response = await fetch(getApiUrl('/api/objects/upload'), {
                           method: 'POST',
                           credentials: 'include',
                         });
@@ -331,7 +334,7 @@ export default function EventForm() {
                       onComplete={async (result: UploadResult<Record<string, unknown>, Record<string, unknown>>) => {
                         if (result.successful && result.successful[0]) {
                           const uploadedUrl = result.successful[0].uploadURL;
-                          const response = await fetch('/api/event-images', {
+                          const response = await fetch(getApiUrl('/api/event-images'), {
                             method: 'PUT',
                             headers: { 'Content-Type': 'application/json' },
                             credentials: 'include',

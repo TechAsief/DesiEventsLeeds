@@ -8,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { getApiUrl } from "@/lib/config";
 import Navbar from "@/components/navbar";
 import Footer from "@/components/footer";
 import type { Event } from "@shared/schema";
@@ -22,7 +23,9 @@ export default function EventDetail() {
   const { data: event, isLoading, error } = useQuery({
     queryKey: ["/api/events", id],
     queryFn: async () => {
-      const response = await fetch(`/api/events/${id}`);
+      const response = await fetch(getApiUrl(`/api/events/${id}`), {
+        credentials: 'include'
+      });
       if (!response.ok) {
         if (response.status === 404) {
           throw new Error("Event not found");
