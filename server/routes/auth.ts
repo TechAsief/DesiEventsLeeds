@@ -106,16 +106,36 @@ router.post('/login', async (req, res) => {
     req.session.userEmail = foundUser.email;
     req.session.userName = `${foundUser.firstName || ''} ${foundUser.lastName || ''}`.trim();
 
-    // Return success response
-    res.status(200).json({
-      success: true,
-      message: 'Login successful',
-      user: {
-        id: foundUser.id,
-        email: foundUser.email,
-        name: `${foundUser.firstName || ''} ${foundUser.lastName || ''}`.trim(),
-        createdAt: foundUser.createdAt,
-      },
+    console.log('🔐 Session created:', {
+      sessionId: req.sessionID,
+      userId: req.session.userId,
+      userEmail: req.session.userEmail
+    });
+
+    // Explicitly save the session before responding
+    req.session.save((err) => {
+      if (err) {
+        console.error('❌ Session save error:', err);
+        return res.status(500).json({
+          success: false,
+          message: 'Failed to save session'
+        });
+      }
+
+      console.log('✅ Session saved successfully');
+
+      // Return success response with role
+      res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        user: {
+          id: foundUser.id,
+          email: foundUser.email,
+          name: `${foundUser.firstName || ''} ${foundUser.lastName || ''}`.trim(),
+          role: foundUser.role || 'poster',
+          createdAt: foundUser.createdAt,
+        },
+      });
     });
 
   } catch (error) {
