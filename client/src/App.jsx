@@ -476,7 +476,12 @@ function App() {
 
       if (response.ok) {
         alert('Event approved successfully!');
-        loadAdminData();
+        // Reload the appropriate page data
+        if (currentRoute === 'my-events') {
+          loadMyEvents();
+        } else if (currentRoute === 'admin') {
+          loadAdminData();
+        }
             } else {
         const errorData = await response.json();
         alert(errorData.message || 'Failed to approve event');
@@ -643,7 +648,14 @@ function App() {
 
   const renderMyEvents = () => (
     <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-6">My Events</h1>
+      <div className="mb-6">
+        <h1 className="text-3xl font-bold">My Events</h1>
+        {userRole === 'admin' && (
+          <p className="text-sm text-gray-600 mt-2">
+            As an admin, you can approve pending events directly from this page or visit the Admin Dashboard for all events.
+          </p>
+        )}
+                                        </div>
       {isLoading ? (
         <div className="text-center">Loading...</div>
       ) : myEvents.length === 0 ? (
@@ -672,12 +684,22 @@ function App() {
               }`}>
                 Status: {event.approvalStatus}
               </p>
+              <div className="mt-4 space-y-2">
+                {userRole === 'admin' && event.approvalStatus === 'pending' && (
                                                 <button
-                onClick={() => handleDeleteEvent(event.id)}
-                className="mt-4 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 w-full"
-              >
-                Delete Event
+                    onClick={() => handleApproveEvent(event.id)}
+                    className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                                                >
+                    Approve Event
+                                                </button>
+                                            )}
+                                            <button
+                  onClick={() => handleDeleteEvent(event.id)}
+                  className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                >
+                  Delete Event
                                             </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
