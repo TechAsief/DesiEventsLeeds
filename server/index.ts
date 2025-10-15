@@ -19,6 +19,9 @@ console.log('Using PORT:', PORT);
 
 const app = express();
 
+// Trust proxy - Required for Railway deployment to handle sessions correctly
+app.set('trust proxy', 1);
+
 // Security Middleware (Helmet sets secure HTTP headers)
 app.use(helmet());
 
@@ -60,17 +63,6 @@ app.use(
 // Body Parsing (Allows reading JSON data from the frontend)
 app.use(express.json());
 
-// Debug middleware to log all requests
-app.use((req, res, next) => {
-  console.log(`📡 ${req.method} ${req.path}`, {
-    body: req.body,
-    headers: req.headers['content-type'],
-    origin: req.headers.origin,
-    cookie: req.headers.cookie ? 'present' : 'missing'
-  });
-  next();
-});
-
 // Session Middleware
 const sessionStore = new (MemoryStore(session))({
   checkPeriod: 86400000, // prune expired entries every 24h
@@ -92,6 +84,19 @@ app.use(
     },
   }),
 );
+
+// Debug middleware to log all requests (AFTER session middleware)
+app.use((req, res, next) => {
+  console.log(`📡 ${req.method} ${req.path}`, {
+    body: req.body,
+    headers: req.headers['content-type'],
+    origin: req.headers.origin,
+    cookie: req.headers.cookie ? 'present' : 'missing',
+    sessionID: req.sessionID,
+    userId: (req.session as any)?.userId || 'none'
+  });
+  next();
+});
 
 // Register auth routes
 app.use('/api/auth', authRouter);
