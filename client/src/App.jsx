@@ -37,6 +37,8 @@ function App() {
   });
   const [eventSubmitLoading, setEventSubmitLoading] = useState(false);
   const [eventSubmitMessage, setEventSubmitMessage] = useState('');
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
   // Check authentication status on app load
   useEffect(() => {
@@ -279,22 +281,30 @@ function App() {
       <h1 className="text-3xl font-bold mb-6">Desi Events Leeds</h1>
       {isLoading ? (
         <div className="text-center">Loading events...</div>
+      ) : events.length === 0 ? (
+        <div className="text-center text-gray-600">
+          <p>No approved events yet. Check back soon!</p>
+        </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => (
-            <div key={event.id} className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-semibold mb-2">{event.title}</h3>
-              <p className="text-gray-600 mb-2">{event.description}</p>
-              <p className="text-sm text-gray-500">Date: {new Date(event.date).toLocaleDateString()}</p>
-              <p className="text-sm text-gray-500">Location: {event.location}</p>
+            <div key={event.id} className="bg-white rounded-lg shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow" onClick={() => handleViewEventDetails(event)}>
               {event.imageUrl && (
-                <img src={event.imageUrl} alt={event.title} className="mt-4 w-full h-48 object-cover rounded" />
+                <img src={event.imageUrl} alt={event.title} className="w-full h-48 object-cover" />
               )}
-                    </div>
-          ))}
-                    </div>
-      )}
+              <div className="p-6">
+                <h3 className="text-xl font-bold mb-2">{event.title}</h3>
+                <p className="text-gray-600 mb-3 line-clamp-2">{event.description}</p>
+                <div className="space-y-1">
+                  <p className="text-sm text-gray-700">📅 {new Date(event.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                  <p className="text-sm text-gray-700">📍 {event.locationText}</p>
                 </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 
   const renderLoginForm = () => (
@@ -382,30 +392,96 @@ function App() {
     setEventFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Check file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image size must be less than 5MB');
+        return;
+      }
+
+      // Check file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select an image file');
+        return;
+      }
+
+      setSelectedImage(file);
+
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setSelectedImage(null);
+    setImagePreview(null);
+  };
+
   const handleEventSubmit = async (e) => {
-        e.preventDefault();
+    e.preventDefault();
     setEventSubmitLoading(true);
     setEventSubmitMessage('');
 
     try {
+      let uploadedImageUrl = null;
+
+      // Upload image first if one is selected
+      if (selectedImage) {
+        setEventSubmitMessage('Uploading image...');
+        
+        const formData = new FormData();
+        formData.append('image', selectedImage);
+
+        try {
+          // Using imgur's free anonymous upload API
+          const imgurResponse = await fetch('https://api.imgur.com/3/image', {
+            method: 'POST',
+            headers: {
+              Authorization: 'Client-ID 546c25a59c58ad7', // Free anonymous client ID
+            },
+            body: formData,
+          });
+
+          if (imgurResponse.ok) {
+            const imgurData = await imgurResponse.json();
+            uploadedImageUrl = imgurData.data.link;
+            console.log('Image uploaded:', uploadedImageUrl);
+          } else {
+            console.error('Image upload failed');
+            setEventSubmitMessage('Image upload failed. Creating event without image...');
+          }
+        } catch (imgError) {
+          console.error('Image upload error:', imgError);
+          setEventSubmitMessage('Image upload failed. Creating event without image...');
+        }
+      }
+
+      setEventSubmitMessage('Creating event...');
+
       // Prepare the data, converting empty strings to null for optional fields
       const eventData = {
         ...eventFormData,
         contactPhone: eventFormData.contactPhone || null,
         bookingLink: eventFormData.bookingLink || null,
-        imageUrl: eventFormData.imageUrl || null,
+        imageUrl: uploadedImageUrl || null,
       };
 
       console.log('Submitting event data:', eventData);
 
       const response = await fetch(getApiUrl('/api/events'), {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(eventData)
-            });
+      });
 
-            if (response.ok) {
+      if (response.ok) {
         setEventSubmitMessage('Event created successfully! Waiting for admin approval.');
         // Reset form
         setEventFormData({
@@ -420,18 +496,20 @@ function App() {
           category: '',
           imageUrl: ''
         });
+        setSelectedImage(null);
+        setImagePreview(null);
         setTimeout(() => {
           handleNavigate('my-events');
         }, 2000);
-            } else {
-                const errorData = await response.json();
+      } else {
+        const errorData = await response.json();
         console.error('Event creation failed:', errorData);
         setEventSubmitMessage(errorData.message || 'Failed to create event');
-            }
+      }
     } catch (error) {
       console.error('Event creation error:', error);
       setEventSubmitMessage('Network error. Please try again.');
-        } finally {
+    } finally {
       setEventSubmitLoading(false);
     }
   };
@@ -752,15 +830,44 @@ function App() {
             </div>
 
             <div className="md:col-span-2">
-              <label className="block text-sm font-medium mb-2">Image URL</label>
-              <input
-                type="url"
-                value={eventFormData.imageUrl}
-                onChange={(e) => handleEventFormChange('imageUrl', e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                placeholder="https://..."
-              />
-                    </div>
+              <label className="block text-sm font-medium mb-2">Event Image</label>
+              {imagePreview ? (
+                <div className="relative">
+                  <img 
+                    src={imagePreview} 
+                    alt="Event preview" 
+                    className="w-full h-64 object-cover rounded-lg border-2 border-gray-300"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleRemoveImage}
+                    className="absolute top-2 right-2 bg-red-600 text-white px-3 py-1 rounded-md hover:bg-red-700"
+                  >
+                    ✕ Remove
+                  </button>
+                </div>
+              ) : (
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                    className="hidden"
+                    id="image-upload"
+                  />
+                  <label
+                    htmlFor="image-upload"
+                    className="cursor-pointer flex flex-col items-center"
+                  >
+                    <svg className="w-12 h-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span className="text-sm text-gray-600 mb-2">Click to upload event image</span>
+                    <span className="text-xs text-gray-500">PNG, JPG up to 5MB</span>
+                  </label>
+                </div>
+              )}
+            </div>
                 </div>
 
           <div className="flex gap-4">
@@ -813,37 +920,48 @@ function App() {
                     </button>
                 </div>
       ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-6 md:grid-cols-2">
           {myEvents.map((event) => (
-            <div key={event.id} className="bg-white rounded-lg shadow-md p-6">
+            <div key={event.id} className="bg-white rounded-lg shadow-md overflow-hidden">
               <div 
                 onClick={() => handleViewEventDetails(event)}
-                className="cursor-pointer hover:bg-gray-50 -m-6 p-6 mb-0 rounded-t-lg transition-colors"
+                className="cursor-pointer hover:opacity-95 transition-opacity"
               >
-                <h3 className="text-xl font-semibold mb-2">{event.title}</h3>
-                <p className="text-gray-600 mb-2 line-clamp-2">{event.description}</p>
-                <p className="text-sm text-gray-500">Date: {new Date(event.date).toLocaleDateString()}</p>
-                <p className="text-sm text-gray-500">Time: {event.time}</p>
-                <p className="text-sm text-gray-500">Location: {event.locationText}</p>
-                <p className={`text-sm font-semibold mt-2 ${
-                  event.approvalStatus === 'approved' ? 'text-green-600' : 
-                  event.approvalStatus === 'pending' ? 'text-yellow-600' : 
-                  'text-red-600'
-                }`}>
-                  Status: {event.approvalStatus}
-                </p>
-                <p className="text-xs text-blue-600 mt-2">Click to view details →</p>
-                        </div>
-              <div className="mt-4 space-y-2">
+                {event.imageUrl && (
+                  <img 
+                    src={event.imageUrl} 
+                    alt={event.title}
+                    className="w-full h-48 object-cover"
+                  />
+                )}
+                <div className="p-6">
+                  <h3 className="text-2xl font-bold mb-3">{event.title}</h3>
+                  <p className="text-gray-600 mb-4 line-clamp-3">{event.description}</p>
+                  <div className="space-y-1 mb-3">
+                    <p className="text-sm text-gray-700">📅 {new Date(event.date).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })}</p>
+                    <p className="text-sm text-gray-700">🕐 {event.time}</p>
+                    <p className="text-sm text-gray-700">📍 {event.locationText}</p>
+                  </div>
+                  <p className={`inline-block text-sm font-semibold px-3 py-1 rounded-full ${
+                    event.approvalStatus === 'approved' ? 'bg-green-100 text-green-700' : 
+                    event.approvalStatus === 'pending' ? 'bg-yellow-100 text-yellow-700' : 
+                    'bg-red-100 text-red-700'
+                  }`}>
+                    {event.approvalStatus === 'approved' ? '✓ Approved' : event.approvalStatus === 'pending' ? '⏳ Pending' : '✗ Rejected'}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-3">Click to view full details →</p>
+                </div>
+              </div>
+              <div className="p-6 pt-0 space-y-2">
                 {userRole === 'admin' && event.approvalStatus === 'pending' && (
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleApproveEvent(event.id);
                     }}
-                    className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                    className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold"
                   >
-                    Approve Event
+                    ✓ Approve Event
                   </button>
                 )}
                 <button
@@ -851,11 +969,11 @@ function App() {
                     e.stopPropagation();
                     handleDeleteEvent(event.id);
                   }}
-                  className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+                  className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold"
                 >
-                  Delete Event
+                  🗑️ Delete Event
                 </button>
-                    </div>
+              </div>
                 </div>
                             ))}
                         </div>
@@ -875,37 +993,47 @@ function App() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2">
             {pendingEvents.map((event) => (
-              <div key={event.id} className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6">
+              <div key={event.id} className="bg-yellow-50 border-2 border-yellow-200 rounded-lg overflow-hidden">
                 <div
                   onClick={() => handleViewEventDetails(event)}
-                  className="cursor-pointer hover:bg-yellow-100 -m-6 p-6 mb-0 rounded-t-lg transition-colors"
+                  className="cursor-pointer hover:bg-yellow-100 transition-colors"
                 >
-                  <h3 className="text-xl font-semibold mb-2">{event.title}</h3>
-                  <p className="text-gray-600 mb-2 line-clamp-2">{event.description}</p>
-                  <p className="text-sm text-gray-500">Date: {new Date(event.date).toLocaleDateString()}</p>
-                  <p className="text-sm text-gray-500">Time: {event.time}</p>
-                  <p className="text-sm text-gray-500">Location: {event.locationText}</p>
-                  <p className="text-sm text-gray-500">Category: {event.category}</p>
-                  <p className="text-xs text-blue-600 mt-2">Click to view full details →</p>
-                        </div>
-                <div className="flex gap-2 mt-4">
-                        <button
+                  {event.imageUrl && (
+                    <img 
+                      src={event.imageUrl} 
+                      alt={event.title}
+                      className="w-full h-40 object-cover"
+                    />
+                  )}
+                  <div className="p-6">
+                    <h3 className="text-xl font-bold mb-2">{event.title}</h3>
+                    <p className="text-gray-600 mb-3 line-clamp-2">{event.description}</p>
+                    <div className="space-y-1 text-sm text-gray-700">
+                      <p>📅 {new Date(event.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })} • 🕐 {event.time}</p>
+                      <p>📍 {event.locationText}</p>
+                      <p>🏷️ {event.category}</p>
+                    </div>
+                    <p className="text-xs text-blue-600 mt-3">Click to view full details →</p>
+                  </div>
+                </div>
+                <div className="flex gap-2 p-4 bg-yellow-100">
+                  <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleViewEventDetails(event);
                     }}
-                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 font-semibold"
                   >
-                    View Details
-                        </button>
+                    📋 View Details
+                  </button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       handleApproveEvent(event.id);
                     }}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold"
                   >
-                    Quick Approve
+                    ✓ Quick Approve
                   </button>
                 </div>
               </div>
