@@ -1053,18 +1053,33 @@ function App() {
               <div 
                 key={event.id} 
                 onClick={() => handleViewEventDetails(event)}
-                className={`rounded-lg p-6 cursor-pointer transition-all hover:shadow-lg ${
+                className={`rounded-lg overflow-hidden cursor-pointer transition-all hover:shadow-lg ${
                   event.approvalStatus === 'approved' ? 'bg-green-50 border-2 border-green-200 hover:bg-green-100' :
                   event.approvalStatus === 'pending' ? 'bg-yellow-50 border-2 border-yellow-200 hover:bg-yellow-100' :
                   'bg-red-50 border-2 border-red-200 hover:bg-red-100'
                 }`}
               >
-                <h3 className="text-lg font-semibold mb-2">{event.title}</h3>
-                <p className="text-sm text-gray-600 mb-2 line-clamp-2">{event.description}</p>
-                <p className="text-xs text-gray-500">Date: {new Date(event.date).toLocaleDateString()}</p>
-                <p className="text-xs text-gray-500">Status: {event.approvalStatus}</p>
-                <p className="text-xs text-blue-600 mt-2">Click to view details →</p>
+                {event.imageUrl && (
+                  <img 
+                    src={event.imageUrl} 
+                    alt={event.title}
+                    className="w-full h-32 object-cover"
+                  />
+                )}
+                <div className="p-4">
+                  <h3 className="text-lg font-bold mb-2">{event.title}</h3>
+                  <p className="text-sm text-gray-600 mb-2 line-clamp-2">{event.description}</p>
+                  <p className="text-xs text-gray-700">📅 {new Date(event.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}</p>
+                  <p className={`inline-block text-xs font-semibold mt-2 px-2 py-1 rounded ${
+                    event.approvalStatus === 'approved' ? 'bg-green-200 text-green-800' :
+                    event.approvalStatus === 'pending' ? 'bg-yellow-200 text-yellow-800' :
+                    'bg-red-200 text-red-800'
+                  }`}>
+                    {event.approvalStatus}
+                  </p>
+                  <p className="text-xs text-blue-600 mt-2">Click for details →</p>
                 </div>
+              </div>
             ))}
                 </div>
         )}
