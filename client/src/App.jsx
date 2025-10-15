@@ -90,6 +90,8 @@ function App() {
       });
       if (response.ok) {
         const data = await response.json();
+        console.log('📊 Loaded events:', data);
+        console.log('📊 First event imageUrl:', data[0]?.imageUrl);
         setEvents(data);
       } else {
         console.error('Failed to load events');
@@ -448,17 +450,26 @@ function App() {
             body: formData,
           });
 
-          if (imgurResponse.ok) {
-            const imgurData = await imgurResponse.json();
+          const imgurData = await imgurResponse.json();
+          console.log('Imgur response:', imgurData);
+
+          if (imgurResponse.ok && imgurData.success) {
             uploadedImageUrl = imgurData.data.link;
-            console.log('Image uploaded:', uploadedImageUrl);
+            console.log('✅ Image uploaded successfully:', uploadedImageUrl);
+            setEventSubmitMessage('Image uploaded! Creating event...');
           } else {
-            console.error('Image upload failed');
+            console.error('❌ Image upload failed:', imgurData);
+            alert('Image upload failed: ' + (imgurData.data?.error || 'Unknown error'));
             setEventSubmitMessage('Image upload failed. Creating event without image...');
+            // Wait a bit so user can see the error
+            await new Promise(resolve => setTimeout(resolve, 2000));
           }
         } catch (imgError) {
-          console.error('Image upload error:', imgError);
+          console.error('❌ Image upload error:', imgError);
+          alert('Image upload error: ' + imgError.message);
           setEventSubmitMessage('Image upload failed. Creating event without image...');
+          // Wait a bit so user can see the error
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
 
