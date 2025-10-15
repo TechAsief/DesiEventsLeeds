@@ -19,6 +19,8 @@ function App() {
   const [adminEvents, setAdminEvents] = useState([]);
   const [pendingEvents, setPendingEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedEventDetail, setSelectedEventDetail] = useState(null);
+  const [showEventModal, setShowEventModal] = useState(false);
   
   // Event form state
   const [eventFormData, setEventFormData] = useState({
@@ -476,6 +478,7 @@ function App() {
 
       if (response.ok) {
         alert('Event approved successfully!');
+        setShowEventModal(false); // Close modal after approval
         // Reload the appropriate page data
         if (currentRoute === 'my-events') {
           loadMyEvents();
@@ -492,6 +495,147 @@ function App() {
     }
   };
 
+  const handleViewEventDetails = (event) => {
+    setSelectedEventDetail(event);
+    setShowEventModal(true);
+  };
+
+  const handleCloseEventModal = () => {
+    setShowEventModal(false);
+    setSelectedEventDetail(null);
+  };
+
+  const renderEventDetailModal = () => {
+    if (!showEventModal || !selectedEventDetail) return null;
+
+    const event = selectedEventDetail;
+
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" onClick={handleCloseEventModal}>
+        <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+          {/* Header */}
+          <div className="sticky top-0 bg-white border-b border-gray-200 p-6">
+            <div className="flex justify-between items-start">
+              <h2 className="text-2xl font-bold text-gray-900">{event.title}</h2>
+                    <button 
+                onClick={handleCloseEventModal}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+                    >
+                        ×
+                    </button>
+                </div>
+            <p className={`mt-2 text-sm font-semibold ${
+              event.approvalStatus === 'approved' ? 'text-green-600' : 
+              event.approvalStatus === 'pending' ? 'text-yellow-600' : 
+              'text-red-600'
+            }`}>
+              Status: {event.approvalStatus}
+            </p>
+                </div>
+
+          {/* Content */}
+          <div className="p-6 space-y-4">
+            {/* Image */}
+            {event.imageUrl && (
+              <img 
+                src={event.imageUrl} 
+                alt={event.title}
+                className="w-full h-64 object-cover rounded-lg"
+              />
+            )}
+
+            {/* Description */}
+            <div>
+              <h3 className="font-semibold text-gray-700 mb-2">Description</h3>
+              <p className="text-gray-600">{event.description}</p>
+                </div>
+
+            {/* Date & Time */}
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-semibold text-gray-700 mb-1">Date</h3>
+                <p className="text-gray-600">{new Date(event.date).toLocaleDateString('en-GB', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        </div>
+              <div>
+                <h3 className="font-semibold text-gray-700 mb-1">Time</h3>
+                <p className="text-gray-600">{event.time}</p>
+                    </div>
+                                        </div>
+
+            {/* Location */}
+                                            <div>
+              <h3 className="font-semibold text-gray-700 mb-1">Location</h3>
+              <p className="text-gray-600">{event.locationText}</p>
+                                            </div>
+
+            {/* Category */}
+                                            <div>
+              <h3 className="font-semibold text-gray-700 mb-1">Category</h3>
+              <p className="text-gray-600 capitalize">{event.category}</p>
+                                            </div>
+
+            {/* Contact Info */}
+            <div className="grid grid-cols-2 gap-4">
+                                            <div>
+                <h3 className="font-semibold text-gray-700 mb-1">Contact Email</h3>
+                                                <p className="text-gray-600">{event.contactEmail}</p>
+                                            </div>
+              {event.contactPhone && (
+                                                <div>
+                  <h3 className="font-semibold text-gray-700 mb-1">Contact Phone</h3>
+                  <p className="text-gray-600">{event.contactPhone}</p>
+                                                </div>
+              )}
+                                                </div>
+
+            {/* Booking Link */}
+            {event.bookingLink && (
+                                                <div>
+                <h3 className="font-semibold text-gray-700 mb-1">Booking Link</h3>
+                <a href={event.bookingLink} target="_blank" rel="noopener noreferrer" className="text-orange-600 hover:underline break-all">
+                  {event.bookingLink}
+                </a>
+                                                </div>
+            )}
+
+            {/* Metadata */}
+            <div className="text-xs text-gray-500 pt-4 border-t">
+              <p>Event ID: {event.id}</p>
+              <p>Created: {new Date(event.createdAt).toLocaleString()}</p>
+                                            </div>
+                                            </div>
+
+          {/* Actions */}
+          <div className="sticky bottom-0 bg-gray-50 border-t border-gray-200 p-6 flex gap-3">
+            {userRole === 'admin' && event.approvalStatus === 'pending' && (
+                                                <button
+                onClick={() => handleApproveEvent(event.id)}
+                className="flex-1 px-6 py-3 bg-green-600 text-white rounded-md hover:bg-green-700 font-semibold"
+                                                >
+                ✓ Approve Event
+                                                </button>
+                                            )}
+                                            <button
+              onClick={() => {
+                handleCloseEventModal();
+                handleDeleteEvent(event.id);
+              }}
+              className="flex-1 px-6 py-3 bg-red-600 text-white rounded-md hover:bg-red-700 font-semibold"
+            >
+              🗑️ Delete Event
+                                            </button>
+                                            <button
+              onClick={handleCloseEventModal}
+              className="px-6 py-3 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 font-semibold"
+                                            >
+              Close
+                                            </button>
+                                        </div>
+            </div>
+        </div>
+    );
+};
+
   const renderEventForm = () => {
 
         return (
@@ -501,47 +645,47 @@ function App() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">Event Title *</label>
-              <input
-                type="text"
+                    <input
+                        type="text"
                 value={eventFormData.title}
                 onChange={(e) => handleEventFormChange('title', e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                required
-              />
+                        required
+                    />
             </div>
 
                         <div>
               <label className="block text-sm font-medium mb-2">Date *</label>
-                            <input
+                <input
                 type="date"
                 value={eventFormData.date}
                 onChange={(e) => handleEventFormChange('date', e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                required
-                            />
+                    required
+                />
                         </div>
 
                         <div>
               <label className="block text-sm font-medium mb-2">Time *</label>
-                            <input
+                <input
                 type="time"
                 value={eventFormData.time}
                 onChange={(e) => handleEventFormChange('time', e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                                required
-                            />
+                    required
+                />
                         </div>
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">Location *</label>
-              <input
-                type="text"
+                    <input
+                        type="text"
                 value={eventFormData.locationText}
                 onChange={(e) => handleEventFormChange('locationText', e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 placeholder="e.g., Leeds City Centre, Millennium Square"
-                required
-              />
+                        required
+                    />
                 </div>
 
             <div className="md:col-span-2">
@@ -553,7 +697,7 @@ function App() {
                 rows="4"
                 required
               />
-            </div>
+                </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Category *</label>
@@ -573,28 +717,28 @@ function App() {
                 <option value="music">Music & Dance</option>
                 <option value="other">Other</option>
               </select>
-                </div>
+        </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Contact Email *</label>
-              <input
-                type="email"
+                <input
+                    type="email"
                 value={eventFormData.contactEmail}
                 onChange={(e) => handleEventFormChange('contactEmail', e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
-                required
-              />
+                    required
+                />
                 </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Contact Phone</label>
-              <input
+                <input
                 type="tel"
                 value={eventFormData.contactPhone}
                 onChange={(e) => handleEventFormChange('contactPhone', e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
               />
-                    </div>
+                </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Booking Link</label>
@@ -605,7 +749,7 @@ function App() {
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
                 placeholder="https://..."
               />
-                    </div>
+            </div>
 
             <div className="md:col-span-2">
               <label className="block text-sm font-medium mb-2">Image URL</label>
@@ -617,94 +761,106 @@ function App() {
                 placeholder="https://..."
               />
                     </div>
-                    </div>
+                </div>
 
           <div className="flex gap-4">
-                        <button
-              type="submit"
+                <button
+                    type="submit"
               disabled={eventSubmitLoading}
               className="px-6 py-3 bg-orange-600 text-white rounded-md hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:opacity-50"
-            >
+                >
               {eventSubmitLoading ? 'Creating...' : 'Create Event'}
-                        </button>
-                        <button
+                </button>
+                    <button
               type="button"
               onClick={() => handleNavigate('feed')}
               className="px-6 py-3 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
-            >
+                    >
               Cancel
-                        </button>
-                </div>
+                    </button>
+                                </div>
 
           {eventSubmitMessage && (
             <div className={`mt-4 p-3 rounded ${eventSubmitMessage.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
               {eventSubmitMessage}
-                        </div>
+                                </div>
           )}
         </form>
-                    </div>
+                                </div>
     );
-  };
+};
 
   const renderMyEvents = () => (
     <div className="max-w-6xl mx-auto p-6">
-      <div className="mb-6">
+                    <div className="mb-6">
         <h1 className="text-3xl font-bold">My Events</h1>
         {userRole === 'admin' && (
           <p className="text-sm text-gray-600 mt-2">
             As an admin, you can approve pending events directly from this page or visit the Admin Dashboard for all events.
           </p>
         )}
-                                        </div>
+                    </div>
       {isLoading ? (
         <div className="text-center">Loading...</div>
       ) : myEvents.length === 0 ? (
         <div className="text-center text-gray-600">
           <p>You haven't created any events yet.</p>
-                                        <button
+                    <button
             onClick={() => handleNavigate('create-event')}
             className="mt-4 px-6 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700"
-          >
+                    >
             Create Your First Event
-                                        </button>
-                                    </div>
+                    </button>
+                </div>
       ) : (
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
           {myEvents.map((event) => (
             <div key={event.id} className="bg-white rounded-lg shadow-md p-6">
-              <h3 className="text-xl font-semibold mb-2">{event.title}</h3>
-              <p className="text-gray-600 mb-2">{event.description}</p>
-              <p className="text-sm text-gray-500">Date: {new Date(event.date).toLocaleDateString()}</p>
-              <p className="text-sm text-gray-500">Time: {event.time}</p>
-              <p className="text-sm text-gray-500">Location: {event.locationText}</p>
-              <p className={`text-sm font-semibold mt-2 ${
-                event.approvalStatus === 'approved' ? 'text-green-600' : 
-                event.approvalStatus === 'pending' ? 'text-yellow-600' : 
-                'text-red-600'
-              }`}>
-                Status: {event.approvalStatus}
-              </p>
+              <div 
+                onClick={() => handleViewEventDetails(event)}
+                className="cursor-pointer hover:bg-gray-50 -m-6 p-6 mb-0 rounded-t-lg transition-colors"
+              >
+                <h3 className="text-xl font-semibold mb-2">{event.title}</h3>
+                <p className="text-gray-600 mb-2 line-clamp-2">{event.description}</p>
+                <p className="text-sm text-gray-500">Date: {new Date(event.date).toLocaleDateString()}</p>
+                <p className="text-sm text-gray-500">Time: {event.time}</p>
+                <p className="text-sm text-gray-500">Location: {event.locationText}</p>
+                <p className={`text-sm font-semibold mt-2 ${
+                  event.approvalStatus === 'approved' ? 'text-green-600' : 
+                  event.approvalStatus === 'pending' ? 'text-yellow-600' : 
+                  'text-red-600'
+                }`}>
+                  Status: {event.approvalStatus}
+                </p>
+                <p className="text-xs text-blue-600 mt-2">Click to view details →</p>
+                        </div>
               <div className="mt-4 space-y-2">
                 {userRole === 'admin' && event.approvalStatus === 'pending' && (
-                                                <button
-                    onClick={() => handleApproveEvent(event.id)}
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleApproveEvent(event.id);
+                    }}
                     className="w-full px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
-                                                >
+                  >
                     Approve Event
-                                                </button>
-                                            )}
-                                            <button
-                  onClick={() => handleDeleteEvent(event.id)}
+                  </button>
+                )}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleDeleteEvent(event.id);
+                  }}
                   className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
                 >
                   Delete Event
-                                            </button>
-                                    </div>
-                                </div>
+                </button>
+                    </div>
+                </div>
                             ))}
                         </div>
-      )}
-        </div>
+                    )}
+                                </div>
     );
 
   const renderAdminDashboard = () => (
@@ -720,31 +876,43 @@ function App() {
           <div className="grid gap-4 md:grid-cols-2">
             {pendingEvents.map((event) => (
               <div key={event.id} className="bg-yellow-50 border-2 border-yellow-200 rounded-lg p-6">
-                <h3 className="text-xl font-semibold mb-2">{event.title}</h3>
-                <p className="text-gray-600 mb-2">{event.description}</p>
-                <p className="text-sm text-gray-500">Date: {new Date(event.date).toLocaleDateString()}</p>
-                <p className="text-sm text-gray-500">Time: {event.time}</p>
-                <p className="text-sm text-gray-500">Location: {event.locationText}</p>
-                <p className="text-sm text-gray-500">Category: {event.category}</p>
-                <div className="flex gap-2 mt-4">
-                <button
-                    onClick={() => handleApproveEvent(event.id)}
-                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                <div
+                  onClick={() => handleViewEventDetails(event)}
+                  className="cursor-pointer hover:bg-yellow-100 -m-6 p-6 mb-0 rounded-t-lg transition-colors"
                 >
-                    Approve
-                </button>
-                    <button
-                    onClick={() => handleDeleteEvent(event.id)}
-                    className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-                    >
-                    Reject/Delete
-                    </button>
+                  <h3 className="text-xl font-semibold mb-2">{event.title}</h3>
+                  <p className="text-gray-600 mb-2 line-clamp-2">{event.description}</p>
+                  <p className="text-sm text-gray-500">Date: {new Date(event.date).toLocaleDateString()}</p>
+                  <p className="text-sm text-gray-500">Time: {event.time}</p>
+                  <p className="text-sm text-gray-500">Location: {event.locationText}</p>
+                  <p className="text-sm text-gray-500">Category: {event.category}</p>
+                  <p className="text-xs text-blue-600 mt-2">Click to view full details →</p>
+                        </div>
+                <div className="flex gap-2 mt-4">
+                        <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleViewEventDetails(event);
+                    }}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                  >
+                    View Details
+                        </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleApproveEvent(event.id);
+                    }}
+                    className="flex-1 px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+                  >
+                    Quick Approve
+                  </button>
                 </div>
-        </div>
+              </div>
             ))}
                         </div>
-                    )}
-                        </div>
+                        )}
+                    </div>
 
       {/* All Events Section */}
       <div>
@@ -754,22 +922,21 @@ function App() {
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {adminEvents.map((event) => (
-              <div key={event.id} className={`rounded-lg p-6 ${
-                event.approvalStatus === 'approved' ? 'bg-green-50 border-2 border-green-200' :
-                event.approvalStatus === 'pending' ? 'bg-yellow-50 border-2 border-yellow-200' :
-                'bg-red-50 border-2 border-red-200'
-              }`}>
+              <div 
+                key={event.id} 
+                onClick={() => handleViewEventDetails(event)}
+                className={`rounded-lg p-6 cursor-pointer transition-all hover:shadow-lg ${
+                  event.approvalStatus === 'approved' ? 'bg-green-50 border-2 border-green-200 hover:bg-green-100' :
+                  event.approvalStatus === 'pending' ? 'bg-yellow-50 border-2 border-yellow-200 hover:bg-yellow-100' :
+                  'bg-red-50 border-2 border-red-200 hover:bg-red-100'
+                }`}
+              >
                 <h3 className="text-lg font-semibold mb-2">{event.title}</h3>
                 <p className="text-sm text-gray-600 mb-2 line-clamp-2">{event.description}</p>
                 <p className="text-xs text-gray-500">Date: {new Date(event.date).toLocaleDateString()}</p>
                 <p className="text-xs text-gray-500">Status: {event.approvalStatus}</p>
-                        <button
-                  onClick={() => handleDeleteEvent(event.id)}
-                  className="mt-3 px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 w-full"
-                        >
-                  Delete
-                        </button>
-                    </div>
+                <p className="text-xs text-blue-600 mt-2">Click to view details →</p>
+                </div>
             ))}
                 </div>
         )}
@@ -799,6 +966,7 @@ function App() {
       <main className="py-8">
             {renderContent()}
       </main>
+      {renderEventDetailModal()}
         </div>
     );
 }
